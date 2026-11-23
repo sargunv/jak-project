@@ -277,8 +277,10 @@ void log_potential_new_db_entry(ExtractorErrorCode error_code,
 
 std::tuple<bool, ExtractorErrorCode> is_iso_file(fs::path path_to_supposed_iso) {
   // it's a file, normalize extension case and verify it's an ISO file
+  // /proc/self/fd/N is an ISO that the parent process opened for us (FileUtil's open_file)
   std::string ext = path_to_supposed_iso.extension().string();
-  if (!std::regex_match(ext, std::regex("\\.(iso|ISO)"))) {
+  const bool inherited = path_to_supposed_iso.string().rfind("/proc/self/fd/", 0) == 0;
+  if (!inherited && !std::regex_match(ext, std::regex("\\.(iso|ISO)"))) {
     lg::error("Provided game data path contains a file that isn't a .ISO!");
     return {false, ExtractorErrorCode::EXTRACTION_INVALID_ISO_PATH};
   }

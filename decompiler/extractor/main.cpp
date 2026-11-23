@@ -341,13 +341,18 @@ int main(int argc, char** argv) {
           fs::remove_all(iso_data_path);
         }
 
-        // std::filesystem doesn't have a rename for dirs...
         // NOTE - potential disaster here, don't do either if the directories are the same location
         // or don't copy if the temp location is _inside_ the destination directory
         if (!file_util::is_dir_in_dir(iso_data_path, temp_iso_extract_location)) {
-          fs::copy(temp_iso_extract_location, iso_data_path, fs::copy_options::recursive);
+          // Moving avoids a second copy of the ISO's files, which matters on a handheld's storage.
+          // Copy if the two are on different file systems.
+          std::error_code moved;
+          fs::rename(temp_iso_extract_location, iso_data_path, moved);
+          if (moved) {
+            fs::copy(temp_iso_extract_location, iso_data_path, fs::copy_options::recursive);
+          }
         }
-        if (iso_data_path != temp_iso_extract_location) {
+        if (iso_data_path != temp_iso_extract_location && fs::exists(temp_iso_extract_location)) {
           // in case input is also output, don't just wipe everything (weird)
           fs::remove_all(temp_iso_extract_location);
         }

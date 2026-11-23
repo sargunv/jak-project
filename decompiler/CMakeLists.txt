@@ -121,6 +121,16 @@ target_link_libraries(decompiler
 add_executable(extractor
         extractor/main.cpp)
 
+if(ANDROID)
+    # Android only installs an APK's native code if it's named lib*.so, so the app ships the
+    # extractor as libextractor.so, next to libmain.so, and runs it from its native library folder.
+    set_target_properties(extractor PROPERTIES OUTPUT_NAME libextractor.so SUFFIX "")
+    if(CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+        set_target_properties(extractor PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+    endif()
+endif()
+
 target_link_libraries(extractor
         decomp
         common

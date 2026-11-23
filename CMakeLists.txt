@@ -192,13 +192,15 @@ if(WIN32)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 endif()
 
-# Android ships only the game runtime; the compiler, decompiler and other tools run on a desktop
+# Android ships the game runtime and the extractor, which installs a game from its ISO. The other
+# tools run on a desktop.
 if(ANDROID)
     set(OG_BUILD_TOOLS_DEFAULT OFF)
 else()
     set(OG_BUILD_TOOLS_DEFAULT ON)
 endif()
 option(OG_BUILD_TOOLS "Build the compiler, decompiler, LSP, tools and tests" ${OG_BUILD_TOOLS_DEFAULT})
+option(OG_BUILD_EXTRACTOR "Build the extractor, with the compiler and decompiler libraries" ON)
 
 # Code Coverage
 option(CODE_COVERAGE "Enable Code Coverage Compiler Flags" OFF)
@@ -334,15 +336,17 @@ build_third_party_lib(imgui imgui)
 # build the game code in C++
 add_subdirectory(game)
 
-if(OG_BUILD_TOOLS)
+if(OG_BUILD_TOOLS OR OG_BUILD_EXTRACTOR)
     # build the compiler
     add_subdirectory(goalc)
 
-    # build standalone tools
-    add_subdirectory(tools)
-
     # build decompiler
     add_subdirectory(decompiler)
+endif()
+
+if(OG_BUILD_TOOLS)
+    # build standalone tools
+    add_subdirectory(tools)
 
     # build the gtest libraries
     if(WIN32)

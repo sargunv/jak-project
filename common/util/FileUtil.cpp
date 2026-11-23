@@ -6,6 +6,7 @@
 #include "FileUtil.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cstdio> /* defines FILENAME_MAX */
 #include <cstdlib>
 #include <fstream>
@@ -689,10 +690,47 @@ std::vector<u8> decompress_dgo(const std::vector<u8>& data_in) {
   return decompressed_data;
 }
 
+#ifdef __linux__
+namespace {
+/*!
+ * Opens /proc/self/fd/N for reading as a copy of descriptor N, from its start. Opening that path
+ * normally opens the file again, which fails when this process may read the descriptor but not
+ * open the file itself, like an Android app's child process given a file from the Storage Access
+ * Framework. Returns nullptr for any other path.
+ */
+FILE* open_inherited_file(const std::string& path, const std::string& mode) {
+  const std::string prefix = "/proc/self/fd/";
+  if (path.rfind(prefix, 0) != 0 || mode.empty() || mode[0] != 'r') {
+    return nullptr;
+  }
+  int fd = -1;
+  const auto* first = path.data() + prefix.size();
+  const auto* last = path.data() + path.size();
+  if (auto [end, ec] = std::from_chars(first, last, fd); ec != std::errc() || end != last) {
+    return nullptr;
+  }
+  int copy = dup(fd);
+  if (copy < 0) {
+    return nullptr;
+  }
+  FILE* fp = lseek(copy, 0, SEEK_SET) == 0 ? fdopen(copy, mode.c_str()) : nullptr;
+  if (!fp) {
+    close(copy);
+  }
+  return fp;
+}
+}  // namespace
+#endif
+
 FILE* open_file(const fs::path& path, const std::string& mode) {
 #ifdef _WIN32
   return _wfopen(path.wstring().c_str(), std::wstring(mode.begin(), mode.end()).c_str());
 #else
+#ifdef __linux__
+  if (FILE* fp = open_inherited_file(path.string(), mode)) {
+    return fp;
+  }
+#endif
   return fopen(path.string().c_str(), mode.c_str());
 #endif
 }
