@@ -128,8 +128,16 @@ bool run_build_level(const std::string& input_file,
 
   // Add textures and models
   // TODO remove hardcoded config settings
-  if (gen_fr3 && ((level_json.contains("art_groups") && !level_json.at("art_groups").empty()) ||
-                  (level_json.contains("textures") && !level_json.at("textures").empty()))) {
+#ifdef __ANDROID__
+  // Finding these in the game loads every DGO again, on top of the build's own memory, and Android
+  // stopped Jak II's install for it. Custom levels are for development, so they go without.
+  const bool find_in_iso = false;
+#else
+  const bool find_in_iso = true;
+#endif
+  if (find_in_iso && gen_fr3 &&
+      ((level_json.contains("art_groups") && !level_json.at("art_groups").empty()) ||
+       (level_json.contains("textures") && !level_json.at("textures").empty()))) {
     lg::info("Looking for ISO path...");
     const auto iso_folder = file_util::get_iso_dir_for_game(GameVersion::Jak2);
     lg::info("Found ISO path: {}", iso_folder.string());

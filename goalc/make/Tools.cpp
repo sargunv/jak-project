@@ -121,8 +121,19 @@ bool CopyTool::run(const ToolInput& task, const PathMap& /*path_map*/) {
     throw std::runtime_error(fmt::format("Invalid amount of inputs to {} tool", name()));
   }
   for (auto& out : task.output) {
-    fs::copy(fs::path(file_util::get_file_path({task.input.at(0)})),
-             fs::path(file_util::get_file_path({out})), fs::copy_options::overwrite_existing);
+    const fs::path from = file_util::get_file_path({task.input.at(0)});
+    const fs::path to = file_util::get_file_path({out});
+#ifdef __ANDROID__
+    // These are the ISO's files, copied into the build's output. On a phone, a hard link saves the
+    // space of a second copy of the ISO while the game installs.
+    std::error_code error;
+    fs::remove(to, error);
+    fs::create_hard_link(from, to, error);
+    if (!error) {
+      continue;
+    }
+#endif
+    fs::copy(from, to, fs::copy_options::overwrite_existing);
   }
   return true;
 }

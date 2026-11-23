@@ -40,6 +40,11 @@ object Installs {
     if (state == null) it - game else it + (game to state)
   }
 
+  /** Shows that the system stopped [game]'s install, along with the app. */
+  fun interrupted(game: Game) = mutableState.update {
+    if (it.isEmpty()) it + (game to InstallState.Failed(InstallError.Killed(null))) else it
+  }
+
   fun dismiss(game: Game) = mutableState.update {
     if (it[game] is InstallState.Failed) it - game else it
   }

@@ -39,6 +39,9 @@ sealed interface InstallError {
   /** The ISO isn't a copy of the game that the extractor knows. */
   data class UnknownIso(override val detail: String?) : InstallError
 
+  /** The system stopped the extractor, most likely for memory. */
+  data class Killed(override val detail: String?) : InstallError
+
   data class Failed(val exitStatus: Int, override val detail: String?) : InstallError
 }
 
@@ -76,21 +79,27 @@ internal class Installer(
       onProgress(InstallProgress(InstallStep.Prepare, null))
       workDir.deleteRecursively()
       workDir.mkdirs()
+      workDir.resolve(GAME_FILE).writeText(game.id)
       GameFiles.unpackBuildFiles(context, game, workDir)
       if (cancelled) return InstallResult.Cancelled
 
       val status =
         context.contentResolver.openFileDescriptor(iso, "r").use { file ->
           requireNotNull(file) { "no file for $iso" }
+          val header = ByteArray(48)
+          val headerBytes = runCatching { Os.pread(file.fileDescriptor, header, 0, header.size, 0) }
+          val isoBytes = discImageBytes(header.copyOf(headerBytes.getOrDefault(0)), file.statSize)
           // The ISO's files, the copies the build makes of most of them, and the converted data
-          val needed = file.statSize * 5 / 2
+          val needed = isoBytes * 5 / 2
           if (workDir.usableSpace < needed) {
             return InstallResult.Failure(InstallError.NotEnoughSpace(needed))
           }
-          extract(file, workDir)
+          extract(file, isoBytes, workDir)
         }
       if (cancelled) return InstallResult.Cancelled
-      if (status.exitStatus != 0) return InstallResult.Failure(status.toError())
+      if (status.exitStatus != 0) {
+        return InstallResult.Failure(installError(status.exitStatus, status.lastError))
+      }
 
       onProgress(InstallProgress(InstallStep.Finish, null))
       val built = workDir.resolve("out/${game.id}")
@@ -113,7 +122,7 @@ internal class Installer(
 
   private class ExtractorStatus(val exitStatus: Int, val lastError: String?)
 
-  private fun extract(iso: ParcelFileDescriptor, workDir: File): ExtractorStatus {
+  private fun extract(iso: ParcelFileDescriptor, isoBytes: Long, workDir: File): ExtractorStatus {
     val extractor = File(context.applicationInfo.nativeLibraryDir, "libextractor.so")
     val argv =
       arrayOf(
@@ -128,6 +137,10 @@ internal class Installer(
         "--compile",
         "--proj-path",
         workDir.path,
+        // A thread per level took Jak II to 7 GB, and Android stopped the install even with 16 GB.
+        // Four peak at 5.4 GB.
+        "--decomp-config-override",
+        """{"level_extract_threads": 4}""",
         "--disable-ansi",
       )
     val envp = arrayOf("HOME=${workDir.path}", "TMPDIR=${context.cacheDir.path}")
@@ -135,7 +148,7 @@ internal class Installer(
     pid = childPid
     if (cancelled) cancel()
 
-    val parser = ProgressParser(iso.statSize, onProgress)
+    val parser = InstallLogParser(isoBytes, onProgress)
     ParcelFileDescriptor.AutoCloseInputStream(ParcelFileDescriptor.adoptFd(output))
       .bufferedReader()
       .useLines { lines ->
@@ -150,85 +163,24 @@ internal class Installer(
     return ExtractorStatus(status, parser.lastError)
   }
 
-  private fun ExtractorStatus.toError(): InstallError =
-    when (exitStatus) {
-      // ExtractorErrorCode in decompiler/extractor/extractor_util.h, as exit statuses mod 256
-      4040 % 256,
-      4041 % 256 -> InstallError.NotAnIso(lastError)
-      in 4000 % 256..4020 % 256 -> InstallError.UnknownIso(lastError)
-      else -> InstallError.Failed(exitStatus, lastError)
-    }
-
-  /** Turns the extractor's log into progress. */
-  private class ProgressParser(
-    private val isoBytes: Long,
-    private val onProgress: (InstallProgress) -> Unit,
-  ) {
-    var lastError: String? = null
-      private set
-
-    private var step = InstallStep.Prepare
-    private var extractedBytes = 0L
-    private var levels = 0
-    private var levelsDone = 0
-    private var lastReport: InstallProgress? = null
-
-    fun feed(line: String) {
-      val message = line.substringAfter("] ", line).let { it.substringAfter("] ", it) }
-      if (line.contains("[error]")) lastError = message.trim()
-
-      when {
-        step <= InstallStep.Extract && message.startsWith("Extracting ") -> {
-          step = InstallStep.Extract
-          EXTRACTING.find(message)?.let { extractedBytes += it.groupValues[1].toLong(16) }
-          report(extractedBytes.toFloat() / isoBytes)
-        }
-        step < InstallStep.Decompile && message.startsWith("Setting up object file DB") -> {
-          step = InstallStep.Decompile
-          report(0f)
-        }
-        step == InstallStep.Decompile && levels == 0 && LOADING.matches(message) -> {
-          levels = LOADING.find(message)!!.groupValues[1].toInt()
-        }
-        step == InstallStep.Decompile && PROCESSING.matches(message) -> {
-          levelsDone++
-          if (levels > 0) report(levelsDone.toFloat() / levels)
-        }
-        else ->
-          BUILD_PERCENT.find(line)?.let {
-            step = InstallStep.Compile
-            report(it.groupValues[1].toInt() / 100f)
-          }
-      }
-    }
-
-    private fun report(fraction: Float) {
-      val progress = InstallProgress(step, fraction.coerceIn(0f, 1f))
-      // At most one update per percent, since the log has thousands of lines
-      val last = lastReport
-      if (
-        last == null ||
-          last.step != progress.step ||
-          progress.fraction!! - last.fraction!! >= 0.01f ||
-          progress.fraction == 1f
-      ) {
-        lastReport = progress
-        onProgress(progress)
-      }
-    }
-
-    companion object {
-      val EXTRACTING = Regex("""^Extracting .*, size 0x([0-9a-fA-F]+)""")
-      val LOADING = Regex("""^-Loading (\d+) DGOs\.\.\.$""")
-      val PROCESSING = Regex("""^Processing \S+\.DGO\.\.\.$""")
-      val BUILD_PERCENT = Regex("""^\[\s*(\d+)%]""")
-    }
-  }
-
   companion object {
     private const val TAG = "OpenGOAL"
 
+    /** Names the game being installed, in the work folder, until the install ends. */
+    private const val GAME_FILE = ".game"
+
     fun workDir(context: Context): File = context.filesDir.resolve("install")
+
+    /**
+     * Deletes the work folder of an install that didn't finish, as when the system stopped the app
+     * for memory, and returns its game. Call when no install is running.
+     */
+    fun cleanUpInterrupted(context: Context): Game? {
+      val workDir = workDir(context)
+      val id = runCatching { workDir.resolve(GAME_FILE).readText() }.getOrNull()
+      workDir.deleteRecursively()
+      return Game.entries.find { it.id == id }
+    }
 
     /** Moves a folder, or copies it where it can't be moved, as into a link to other storage. */
     private fun move(from: File, to: File) {

@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
 private fun Library(viewModel: LibraryViewModel = viewModel()) {
   val context = LocalContext.current
   val games by viewModel.games.collectAsStateWithLifecycle()
-  val swapFaceButtons by viewModel.swapFaceButtons.collectAsStateWithLifecycle()
+  val settings by viewModel.settings.collectAsStateWithLifecycle()
   var installing by rememberSaveable { mutableStateOf<Game?>(null) }
 
   val pickIso =
@@ -104,8 +104,8 @@ private fun Library(viewModel: LibraryViewModel = viewModel()) {
     onCancelInstall = { InstallService.cancel(context) },
     onDelete = viewModel::delete,
     onDismissError = viewModel::dismissError,
-    swapFaceButtons = swapFaceButtons,
-    onSwapFaceButtonsChange = viewModel::setSwapFaceButtons,
+    settings = settings,
+    onSettingsChange = viewModel::updateSettings,
   )
 }
 

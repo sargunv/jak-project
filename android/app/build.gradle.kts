@@ -70,8 +70,9 @@ abstract class StageGameFiles : DefaultTask() {
       mapOf(
         "*" to listOf("goal_src/common", "goal_src/goal-lib.gc", "goal_src/goos-lib.gs"),
         "jak1" to listOf("goal_src/jak1", "decompiler/config/jak1"),
-        "jak2" to listOf("goal_src/jak2", "decompiler/config/jak2"),
-        "jak3" to listOf("goal_src/jak3", "decompiler/config/jak3"),
+        // Jak II and Jak 3 also compile Jak 1's PC kernel (cgo-file in their lib/project-lib.gp)
+        "jak2" to listOf("goal_src/jak2", "goal_src/jak1/pc", "decompiler/config/jak2"),
+        "jak3" to listOf("goal_src/jak3", "goal_src/jak1/pc", "decompiler/config/jak3"),
       )
   }
 }
@@ -158,4 +159,8 @@ dependencies {
   implementation(libs.lifecycle.runtime.compose)
   implementation(libs.lifecycle.viewmodel.compose)
   debugImplementation(libs.compose.ui.tooling)
+  testImplementation(libs.junit)
 }
+
+// InstallLogTest checks the extractor's source for the log lines that the installer follows
+tasks.withType<Test>().configureEach { systemProperty("repoRoot", repoRoot.path) }

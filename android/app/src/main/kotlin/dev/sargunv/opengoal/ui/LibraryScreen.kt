@@ -55,6 +55,7 @@ import dev.sargunv.opengoal.InstallError
 import dev.sargunv.opengoal.InstallProgress
 import dev.sargunv.opengoal.InstallStep
 import dev.sargunv.opengoal.R
+import dev.sargunv.opengoal.Settings
 import dev.sargunv.opengoal.label
 import kotlin.math.roundToInt
 
@@ -67,8 +68,8 @@ fun LibraryScreen(
   onCancelInstall: () -> Unit,
   onDelete: (Game) -> Unit,
   onDismissError: (Game) -> Unit,
-  swapFaceButtons: Boolean,
-  onSwapFaceButtonsChange: (Boolean) -> Unit,
+  settings: Settings,
+  onSettingsChange: ((Settings) -> Settings) -> Unit,
 ) {
   val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
   val installing = games.any { it.status is GameStatus.Installing }
@@ -124,21 +125,16 @@ fun LibraryScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
         }
-        item {
-          Text(
-            stringResource(R.string.controller_header),
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-          )
-        }
+        item { SectionHeader(stringResource(R.string.controller_header)) }
         item {
           SegmentedListItem(
-            checked = swapFaceButtons,
-            onCheckedChange = onSwapFaceButtonsChange,
+            checked = settings.swapFaceButtons,
+            onCheckedChange = { swap -> onSettingsChange { it.copy(swapFaceButtons = swap) } },
             shapes = ListItemDefaults.segmentedShapes(0, 1),
             supportingContent = { Text(stringResource(R.string.swap_face_buttons_summary)) },
-            trailingContent = { Switch(checked = swapFaceButtons, onCheckedChange = null) },
+            trailingContent = {
+              Switch(checked = settings.swapFaceButtons, onCheckedChange = null)
+            },
           ) {
             Text(stringResource(R.string.swap_face_buttons))
           }
@@ -178,6 +174,16 @@ fun LibraryScreen(
         },
       )
     }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+  Text(
+    text,
+    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+    style = MaterialTheme.typography.titleSmall,
+    color = MaterialTheme.colorScheme.primary,
+  )
 }
 
 @Composable
@@ -330,6 +336,7 @@ private fun ErrorDialog(
         )
       is InstallError.NotAnIso -> stringResource(R.string.error_not_iso)
       is InstallError.UnknownIso -> stringResource(R.string.error_unknown_iso, gameTitle)
+      is InstallError.Killed -> stringResource(R.string.error_killed)
       is InstallError.Failed -> stringResource(R.string.error_failed, error.exitStatus)
     }
   AlertDialog(
@@ -373,8 +380,8 @@ private fun LibraryScreenPreview() {
       onCancelInstall = {},
       onDelete = {},
       onDismissError = {},
-      swapFaceButtons = false,
-      onSwapFaceButtonsChange = {},
+      settings = Settings(),
+      onSettingsChange = {},
     )
   }
 }

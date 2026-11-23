@@ -37,6 +37,7 @@
   <string name="error_space">Not enough storage. Installing needs %1$s free.</string>
   <string name="error_not_iso">Not a complete ISO or CHD disc image.</string>
   <string name="error_unknown_iso">Not a supported disc image of %1$s.</string>
+  <string name="error_killed">The system stopped the installer, likely to free memory. Close other apps and try again.</string>
   <string name="error_failed">Installer error %1$d.</string>
   <string name="error_retry">Try again</string>
   <string name="error_close">Close</string>

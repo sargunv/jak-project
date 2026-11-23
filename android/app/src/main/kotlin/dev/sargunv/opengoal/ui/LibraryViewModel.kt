@@ -11,6 +11,7 @@ import dev.sargunv.opengoal.InstallProgress
 import dev.sargunv.opengoal.InstallState
 import dev.sargunv.opengoal.Installer
 import dev.sargunv.opengoal.Installs
+import dev.sargunv.opengoal.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 
 /** What the game list shows for each game. */
@@ -75,16 +77,18 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
   init {
     // An install that the system stopped with the app leaves its work folder behind
     viewModelScope.launch(Dispatchers.IO) {
-      if (!Installs.isRunning) Installer.workDir(application).deleteRecursively()
+      if (!Installs.isRunning) {
+        Installer.cleanUpInterrupted(application)?.let { Installs.interrupted(it) }
+      }
     }
   }
 
-  private val mutableSwapFaceButtons = MutableStateFlow(AppSettings.swapFaceButtons(application))
-  val swapFaceButtons: StateFlow<Boolean> = mutableSwapFaceButtons
+  private val mutableSettings = MutableStateFlow(AppSettings.read(application))
+  val settings: StateFlow<Settings> = mutableSettings
 
-  fun setSwapFaceButtons(swap: Boolean) {
-    mutableSwapFaceButtons.value = swap
-    viewModelScope.launch(Dispatchers.IO) { AppSettings.setSwapFaceButtons(getApplication(), swap) }
+  fun updateSettings(change: (Settings) -> Settings) {
+    val settings = mutableSettings.updateAndGet(change)
+    viewModelScope.launch(Dispatchers.IO) { AppSettings.write(getApplication(), settings) }
   }
 
   /** Looks at the installed games again, as when the app comes back to the foreground. */

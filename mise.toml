@@ -69,6 +69,11 @@ description = "Build the debug APK"
 dir = "android"
 run = "./gradlew assembleDebug"
 
+[tasks."android:test"]
+description = "Run the app's JVM unit tests"
+dir = "android"
+run = "./gradlew :app:testDebugUnitTest"
+
 [tasks."android:install"]
 description = "Install the debug APK on the adb device"
 depends = ["android:build"]
