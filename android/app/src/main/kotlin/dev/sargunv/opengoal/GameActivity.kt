@@ -28,9 +28,10 @@ class GameActivity : SDLActivity() {
       if (name.isNotEmpty()) Os.setenv(name, value, true)
     }
 
-    // Game data that the desktop tools extracted and compiled. External app storage lets
-    // `adb push` reach it during development.
+    // The data folder: the files the APK ships (GameFiles), and the game data that the desktop
+    // tools extracted and compiled. External app storage lets `adb push` reach it.
     val dataDir = requireNotNull(getExternalFilesDir(null)).resolve("data")
+    GameFiles.install(this, dataDir)
     val configDir = filesDir.resolve("config")
 
     val game = intent.getStringExtra("game") ?: "jak1"
