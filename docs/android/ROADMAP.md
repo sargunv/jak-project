@@ -142,7 +142,11 @@ the renderer can be finished before any arm64 hardware is involved.
       per place. ANGLE reports none at the 13 places it visits. Adreno reports
       its own driver notes ("Packing allocations for resource") with type
       0x7FFFFFFF, which the log calls errors: filter them.
-- [ ] The Thor shows its status bar over the game.
+- [x] The game hides the status and navigation bars: the window is created
+      fullscreen, and the display manager reads the window's size every frame,
+      since hiding the bars resizes the window without an event reaching it. The
+      Thor's system UI still draws its own home handle (`SecondaryHomeHandle`)
+      over fullscreen apps.
 - [ ] `glGetTexImage` is a no-op on OpenGL ES. Only debug texture dumps use it;
       read through a framebuffer with `glReadPixels` instead.
 - [ ] The game's own menus still offer display modes, monitors and resolutions,

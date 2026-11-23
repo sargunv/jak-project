@@ -209,9 +209,14 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
   // Setup the window
   prof().instant_event("ROOT");
   prof().begin_event("startup::sdl::create_window");
-  SDL_Window* window =
-      SDL_CreateWindow(title, width, height,
-                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+  SDL_WindowFlags window_flags =
+      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#ifdef __ANDROID__
+  // A fullscreen window hides the status and navigation bars (SDL's immersive mode). The display
+  // manager never changes it (display_manager.cpp).
+  window_flags |= SDL_WINDOW_FULLSCREEN;
+#endif
+  SDL_Window* window = SDL_CreateWindow(title, width, height, window_flags);
   prof().end_event();
   if (!window) {
     sdl_util::log_error("gl_make_display failed - Could not create display window");

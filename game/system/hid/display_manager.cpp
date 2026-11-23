@@ -137,6 +137,11 @@ void DisplayManager::process_sdl_event(const SDL_Event& event) {
 }
 
 void DisplayManager::process_ee_events() {
+#ifdef __ANDROID__
+  // Hiding the system bars resizes the window without a resize event reaching us, which left the
+  // game drawing to the window's size from before. The game reads this size every frame.
+  SDL_GetWindowSizeInPixels(m_window, &m_window_width, &m_window_height);
+#endif
   const std::lock_guard<std::mutex> lock(event_queue_mtx);
   // Fully process any events from the EE
   while (!ee_event_queue.empty()) {
