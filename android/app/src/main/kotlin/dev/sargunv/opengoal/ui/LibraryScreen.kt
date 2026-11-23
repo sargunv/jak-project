@@ -29,6 +29,7 @@ import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -66,6 +67,8 @@ fun LibraryScreen(
   onCancelInstall: () -> Unit,
   onDelete: (Game) -> Unit,
   onDismissError: (Game) -> Unit,
+  swapFaceButtons: Boolean,
+  onSwapFaceButtonsChange: (Boolean) -> Unit,
 ) {
   val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
   val installing = games.any { it.status is GameStatus.Installing }
@@ -120,6 +123,25 @@ fun LibraryScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
+        }
+        item {
+          Text(
+            stringResource(R.string.controller_header),
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+          )
+        }
+        item {
+          SegmentedListItem(
+            checked = swapFaceButtons,
+            onCheckedChange = onSwapFaceButtonsChange,
+            shapes = ListItemDefaults.segmentedShapes(0, 1),
+            supportingContent = { Text(stringResource(R.string.swap_face_buttons_summary)) },
+            trailingContent = { Switch(checked = swapFaceButtons, onCheckedChange = null) },
+          ) {
+            Text(stringResource(R.string.swap_face_buttons))
+          }
         }
       }
     }
@@ -351,6 +373,8 @@ private fun LibraryScreenPreview() {
       onCancelInstall = {},
       onDelete = {},
       onDismissError = {},
+      swapFaceButtons = false,
+      onSwapFaceButtonsChange = {},
     )
   }
 }

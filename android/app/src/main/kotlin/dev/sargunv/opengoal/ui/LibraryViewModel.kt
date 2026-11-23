@@ -3,6 +3,7 @@ package dev.sargunv.opengoal.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.sargunv.opengoal.AppSettings
 import dev.sargunv.opengoal.Game
 import dev.sargunv.opengoal.GameFiles
 import dev.sargunv.opengoal.InstallError
@@ -76,6 +77,14 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     viewModelScope.launch(Dispatchers.IO) {
       if (!Installs.isRunning) Installer.workDir(application).deleteRecursively()
     }
+  }
+
+  private val mutableSwapFaceButtons = MutableStateFlow(AppSettings.swapFaceButtons(application))
+  val swapFaceButtons: StateFlow<Boolean> = mutableSwapFaceButtons
+
+  fun setSwapFaceButtons(swap: Boolean) {
+    mutableSwapFaceButtons.value = swap
+    viewModelScope.launch(Dispatchers.IO) { AppSettings.setSwapFaceButtons(getApplication(), swap) }
   }
 
   /** Looks at the installed games again, as when the app comes back to the foreground. */

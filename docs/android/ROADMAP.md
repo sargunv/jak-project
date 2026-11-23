@@ -166,8 +166,10 @@ the renderer can be finished before any arm64 hardware is involved.
 ## Milestone 2: playable on x86_64
 
 - [ ] **Input on hardware.** A virtual Xbox controller works through Innkeeper,
-      hotplug included. Check the Thor's built-in controls and their mapping.
-      Phones need a touch overlay.
+      hotplug included. The Thor's built-in controls play Jak 1. Its Nintendo
+      layout mode swaps A with B and X with Y, which the launcher's "Swap face
+      buttons" setting undoes (`OG_SWAP_FACE_BUTTONS`, applied before the game's
+      position-based binds). Phones need a touch overlay.
 - [ ] **Audio latency** on a device. AAudio opens in low-latency mode with
       240-frame bursts in Innkeeper.
 - [ ] **Installs on hardware.** Time and memory on the Thor. The decompiler

@@ -1,6 +1,8 @@
 #include "game_controller.h"
 
+#include <cstdlib>
 #include <optional>
+#include <string>
 
 #include "dualsense_effects.h"
 #include "game_controller.h"
@@ -8,6 +10,38 @@
 #include "game/system/hid/sdl_util.h"
 
 #include "fmt/format.h"
+
+namespace {
+/*!
+ * The button at the position that the controller reports. Some handhelds, such as the AYN Thor,
+ * have a Nintendo layout mode that swaps A with B and X with Y, so the bottom button reports itself
+ * as the right one. The Android app sets OG_SWAP_FACE_BUTTONS to swap them back, since the game's
+ * binds are by position.
+ */
+SDL_GamepadButton face_button_in_layout(SDL_GamepadButton button) {
+#ifdef __ANDROID__
+  static const bool swap = [] {
+    const char* value = std::getenv("OG_SWAP_FACE_BUTTONS");
+    return value && std::string(value) == "1";
+  }();
+  if (swap) {
+    switch (button) {
+      case SDL_GAMEPAD_BUTTON_SOUTH:
+        return SDL_GAMEPAD_BUTTON_EAST;
+      case SDL_GAMEPAD_BUTTON_EAST:
+        return SDL_GAMEPAD_BUTTON_SOUTH;
+      case SDL_GAMEPAD_BUTTON_WEST:
+        return SDL_GAMEPAD_BUTTON_NORTH;
+      case SDL_GAMEPAD_BUTTON_NORTH:
+        return SDL_GAMEPAD_BUTTON_WEST;
+      default:
+        break;
+    }
+  }
+#endif
+  return button;
+}
+}  // namespace
 
 GameController::GameController(int sdl_device_id,
                                std::shared_ptr<game_settings::InputSettings> settings)
@@ -200,22 +234,23 @@ void GameController::process_event(const SDL_Event& event,
         event.gbutton.button >= SDL_GAMEPAD_BUTTON_COUNT) {
       return;
     }
+    const auto button = face_button_in_layout(static_cast<SDL_GamepadButton>(event.gbutton.button));
 
     // Binding re-assignment
     if (bind_assignment && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
       if (bind_assignment->device_type == InputDeviceType::CONTROLLER &&
           !bind_assignment->for_analog) {
-        binds.assign_button_bind(event.gbutton.button, bind_assignment.value());
+        binds.assign_button_bind(button, bind_assignment.value());
       }
       return;
     }
 
-    if (binds.buttons.find(event.gbutton.button) == binds.buttons.end()) {
+    if (binds.buttons.find(button) == binds.buttons.end()) {
       return;
     }
 
     // Iterate the binds, and apply all of them
-    for (const auto& bind : binds.buttons.at(event.gbutton.button)) {
+    for (const auto& bind : binds.buttons.at(button)) {
       // 1. pressed flag
       data->button_data.at(bind.pad_data_index) = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
       // 2. potentially get the pressure value as well
@@ -223,10 +258,10 @@ void GameController::process_event(const SDL_Event& event,
           static_cast<PadData::ButtonIndex>(bind.pad_data_index));
       if (pressure_index != PadData::PressureIndex::INVALID_PRESSURE) {
         if (m_settings->enable_pressure_sensitivity && m_has_pressure_sensitive_buttons &&
-            button_to_pressure_axes.contains(event.gbutton.button)) {
+            button_to_pressure_axes.contains(button)) {
           // TODO - handle error
-          const auto pressure_val = SDL_GetJoystickAxis(
-              m_low_device_handle, button_to_pressure_axes.at(event.gbutton.button));
+          const auto pressure_val =
+              SDL_GetJoystickAxis(m_low_device_handle, button_to_pressure_axes.at(button));
           data->pressure_data.at(pressure_index) = normalize_axes_value(pressure_val);
         } else {
           data->pressure_data.at(pressure_index) =
@@ -237,8 +272,8 @@ void GameController::process_event(const SDL_Event& event,
 
     // Check for commands
     if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN &&
-        commands.controller_binds.find(event.gbutton.button) != commands.controller_binds.end()) {
-      for (const auto& command : commands.controller_binds.at(event.gbutton.button)) {
+        commands.controller_binds.find(button) != commands.controller_binds.end()) {
+      for (const auto& command : commands.controller_binds.at(button)) {
         if (command.event_command) {
           command.event_command(event);
         } else if (command.command) {
