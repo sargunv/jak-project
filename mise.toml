@@ -76,11 +76,8 @@ run = "adb install -r android/app/build/outputs/apk/debug/app-debug.apk"
 
 [tasks."android:push-data"]
 description = "Push a game's extracted and compiled data to the adb device"
-usage = '''
-arg "[game]" default="jak1"
-flag "--files" help="Also push the repository's shaders and assets, which the APK otherwise ships"
-'''
-run = 'android/scripts/push-data.sh ${usage_files:+--files} "${usage_game}"'
+usage = 'arg "[game]" default="jak1"'
+run = 'android/scripts/push-data.sh "${usage_game}"'
 
 [tasks."android:run"]
 description = "Start a game on the adb device"
@@ -88,10 +85,11 @@ usage = '''
 arg "[game]" default="jak1"
 flag "--args <args>" default="-boot -fakeiso" help="Arguments for the game"
 flag "--env <env>" default="" help="Space-separated NAME=value environment variables for the runtime"
+flag "--runtime-args <args>" default="" help="Options for the runtime itself, such as --no-display"
 '''
 run = """
 adb shell am force-stop dev.sargunv.opengoal
-adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game "${usage_game}" --es args "'${usage_args}'" --es env "'${usage_env}'"
+adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game "${usage_game}" --es args "'${usage_args}'" --es env "'${usage_env}'" --es runtime_args "'${usage_runtime_args}'"
 """
 
 [tasks."android:logcat"]

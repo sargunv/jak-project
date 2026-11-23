@@ -2,6 +2,7 @@ package dev.sargunv.opengoal
 
 import android.content.Context
 import android.content.res.AssetManager
+import android.system.Os
 import android.util.Log
 import java.io.File
 
@@ -33,6 +34,15 @@ internal object GameFiles {
     // The runtime lists this folder (user profiles for the REPL), and it must exist
     dataDir.resolve("goal_src/user").mkdirs()
     versionFile.writeText(version)
+  }
+
+  /** Makes [link] a symbolic link to [target], unless it's a real folder. */
+  fun link(link: File, target: File) {
+    val current = runCatching { Os.readlink(link.path) }.getOrNull()
+    if (current == target.path) return
+    if (current == null && link.isDirectory) return
+    link.delete()
+    Os.symlink(target.path, link.path)
   }
 
   private fun copy(assets: AssetManager, path: String, dest: File) {

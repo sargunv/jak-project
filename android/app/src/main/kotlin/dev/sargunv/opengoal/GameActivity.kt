@@ -28,10 +28,15 @@ class GameActivity : SDLActivity() {
       if (name.isNotEmpty()) Os.setenv(name, value, true)
     }
 
-    // The data folder: the files the APK ships (GameFiles), and the game data that the desktop
-    // tools extracted and compiled. External app storage lets `adb push` reach it.
-    val dataDir = requireNotNull(getExternalFilesDir(null)).resolve("data")
+    // The runtime's data folder, in internal storage, holds the files the APK ships (GameFiles),
+    // and out/ with the game data that the desktop tools extracted and compiled. push-data.sh
+    // copies that data into out/ with run-as. Innkeeper has no run-as, so there out/ links to
+    // external storage, where adb can write.
+    val dataDir = filesDir.resolve("data")
     GameFiles.install(this, dataDir)
+    val gameData = requireNotNull(getExternalFilesDir(null)).resolve("data/out")
+    gameData.mkdirs()
+    GameFiles.link(dataDir.resolve("out"), gameData)
     val configDir = filesDir.resolve("config")
 
     val game = intent.getStringExtra("game") ?: "jak1"
@@ -40,17 +45,25 @@ class GameActivity : SDLActivity() {
         it.isNotEmpty()
       }
 
-    return arrayOf(
-      "-v",
-      // logcat shows ANSI escapes as text
-      "--disable-ansi",
-      "--game",
-      game,
-      "--proj-path",
-      dataDir.path,
-      "--config-path",
-      configDir.path,
-      "--",
-    ) + gameArgs
+    // Development: runtime options, such as --no-display
+    val runtimeArgs =
+      (intent.getStringExtra("runtime_args") ?: "").split(' ').filter {
+        it.isNotEmpty()
+      }
+
+    return runtimeArgs.toTypedArray() +
+      arrayOf(
+        "-v",
+        // logcat shows ANSI escapes as text
+        "--disable-ansi",
+        "--game",
+        game,
+        "--proj-path",
+        dataDir.path,
+        "--config-path",
+        configDir.path,
+        "--",
+      ) +
+      gameArgs
   }
 }
