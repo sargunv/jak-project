@@ -129,7 +129,7 @@
    (vsync?                           symbol) ;; vsync.
    (font-scale                       float) ;; font scaling.
    ;; debug settings
-   (os                               symbol) ;; windows, linux, macos
+   (os                               symbol) ;; windows, linux, darwin, android
    (user                             symbol) ;; username. not system username, just debug thing.
    (debug?                           symbol) ;; more debug stuff just in case.
    (debug-font-scale                 float) ;; debug font scaling factor.

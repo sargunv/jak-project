@@ -1045,6 +1045,8 @@ void pc_set_gfx_hack(u64 which, u32 symptr) {
 u32 pc_get_os() {
 #ifdef _WIN32
   return g_pc_port_funcs.intern_from_c("windows").offset;
+#elif __ANDROID__
+  return g_pc_port_funcs.intern_from_c("android").offset;
 #elif __linux__
   return g_pc_port_funcs.intern_from_c("linux").offset;
 #elif __APPLE__

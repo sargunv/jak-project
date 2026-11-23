@@ -128,6 +128,11 @@ class DisplayManager {
   //
   // ie. allowing someone to set 150fps on a monitor set to 60hz is not correct
   std::vector<DisplayMode> m_current_display_modes;
+#ifdef __ANDROID__
+  // The screen's fastest refresh rate, read once: get_active_display_refresh_rate runs on the EE
+  // thread, which Java can't attach to.
+  int m_max_refresh_rate = 0;
+#endif
   std::vector<Resolution> m_available_resolutions;
   std::vector<Resolution> m_available_window_sizes;
 

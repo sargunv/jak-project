@@ -50,6 +50,10 @@
 
 #include "third-party/stb_image/stb_image.h"
 
+#ifdef __ANDROID__
+#include "game/android/activity.h"
+#endif
+
 constexpr bool run_dma_copy = false;
 
 constexpr PerGameVersion<int> fr3_level_count(jak1::LEVEL_TOTAL,
@@ -754,17 +758,6 @@ void GLDisplay::render() {
       game_res_w = 640;
       game_res_h = 480;
     }
-#ifdef __ANDROID__
-    // Phone screens can have more pixels than their GPUs can fill at full speed. The app passes
-    // a render scale, and the renderer scales the smaller image up to the screen.
-    static const float render_scale = [] {
-      const char* env = std::getenv("OG_RENDER_SCALE");
-      const float scale = env ? std::strtof(env, nullptr) : 1.f;
-      return scale > 0.f && scale <= 1.f ? scale : 1.f;
-    }();
-    game_res_w = std::max(1, static_cast<int>(game_res_w * render_scale));
-    game_res_h = std::max(1, static_cast<int>(game_res_h * render_scale));
-#endif
     // set the size of the visible/playable portion of the game in the window
     get_display_manager()->set_game_size(Gfx::g_global_settings.lbox_w,
                                          Gfx::g_global_settings.lbox_h);
@@ -803,6 +796,9 @@ void GLDisplay::render() {
 
   // actual vsync
   g_gfx_data->debug_gui.finish_frame();
+#ifdef __ANDROID__
+  android_set_frame_rate(Gfx::g_global_settings.target_fps);
+#endif
   if (Gfx::g_global_settings.framelimiter) {
     auto p = scoped_prof("frame-limiter");
     g_gfx_data->frame_limiter.run(

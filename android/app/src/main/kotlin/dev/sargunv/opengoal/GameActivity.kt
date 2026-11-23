@@ -1,8 +1,21 @@
 package dev.sargunv.opengoal
 
 import android.content.pm.ApplicationInfo
+import android.media.AudioAttributes
+import android.os.Build
+import android.os.Bundle
 import android.os.Process
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.system.Os
+import android.util.Log
+import android.view.WindowInsets
+import android.view.WindowInsetsController
+import androidx.annotation.Keep
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import org.libsdl.app.SDLActivity
 
 /**
@@ -20,6 +33,20 @@ import org.libsdl.app.SDLActivity
  * ```
  */
 class GameActivity : SDLActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    // The game fills the screen. SDL hides the system bars only once the game's window exists, and
+    // a window that started with them showing kept drawing the status bar's background over the top
+    // of the game. So the window starts without them.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      window.setDecorFitsSystemWindows(false)
+      window.insetsController?.let {
+        it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        it.hide(WindowInsets.Type.systemBars())
+      }
+    }
+  }
+
   override fun getLibraries() = arrayOf("main")
 
   override fun getMainFunction() = "main"
@@ -32,7 +59,8 @@ class GameActivity : SDLActivity() {
     Os.setenv("HOME", filesDir.path, true)
 
     // The launcher's settings
-    if (AppSettings.swapFaceButtons(this)) Os.setenv("OG_SWAP_FACE_BUTTONS", "1", true)
+    val settings = AppSettings.read(this)
+    if (settings.swapFaceButtons) Os.setenv("OG_SWAP_FACE_BUTTONS", "1", true)
 
     // Environment variables for the runtime, such as OG_SCREENSHOT_FRAMES=600,1200
     devExtra("env")?.split(' ')?.forEach { assignment ->
@@ -71,6 +99,82 @@ class GameActivity : SDLActivity() {
         "--",
       ) +
       gameArgs
+  }
+
+  /**
+   * Picks the display mode for the game's frame rate: the slowest refresh rate that shows each
+   * frame a whole number of times, such as 60 Hz for 60 fps. Otherwise a 120 Hz display shows some
+   * frames once and some three times. This overrides a minimum refresh rate in the system's
+   * settings, while the game is in front. The runtime calls it when the frame rate changes
+   * (activity.cpp).
+   */
+  @Keep
+  fun setGameFrameRate(fps: Float) = runOnUiThread {
+    @Suppress("DEPRECATION") val display = windowManager.defaultDisplay
+    val current = display.mode
+    val mode =
+      display.supportedModes
+        .filter {
+          it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight
+        }
+        .filter { mode ->
+          val frames = mode.refreshRate / fps
+          frames >= 0.99f && abs(frames - frames.roundToInt()) < 0.01f
+        }
+        .minByOrNull { it.refreshRate } ?: return@runOnUiThread
+    if (window.attributes.preferredDisplayModeId != mode.modeId) {
+      Log.i("OpenGOAL", "Display mode ${mode.refreshRate} Hz for $fps fps")
+      window.attributes = window.attributes.apply { preferredDisplayModeId = mode.modeId }
+    }
+  }
+
+  /**
+   * The screen's fastest refresh rate, for the frame rates that the game's menus offer. The current
+   * one can be lower, since [setGameFrameRate] changes it. The runtime calls it (activity.cpp).
+   */
+  @Keep
+  fun getMaxRefreshRate(): Float {
+    @Suppress("DEPRECATION") val display = windowManager.defaultDisplay
+    return display.supportedModes.maxOf { it.refreshRate }
+  }
+
+  private val vibrator: Vibrator by lazy {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      getSystemService(VibratorManager::class.java).defaultVibrator
+    } else {
+      @Suppress("DEPRECATION") getSystemService(Vibrator::class.java)
+    }
+  }
+
+  /**
+   * Whether the device has a vibrator, which stands in for a controller's rumble (activity.cpp).
+   */
+  @Keep fun hasVibrator(): Boolean = vibrator.hasVibrator()
+
+  /**
+   * Vibrates the device at [strength], from 0 (stop) to 1, for a controller without a motor of its
+   * own, such as the AYN Thor's. As media, since Android treats a vibration without a usage as
+   * touch feedback, which the system's settings can turn off.
+   */
+  @Keep
+  fun vibrate(strength: Float, milliseconds: Int) {
+    if (strength <= 0f) {
+      vibrator.cancel()
+      return
+    }
+    val amplitude =
+      if (vibrator.hasAmplitudeControl()) (strength * 255).roundToInt().coerceIn(1, 255)
+      else VibrationEffect.DEFAULT_AMPLITUDE
+    val effect = VibrationEffect.createOneShot(milliseconds.toLong(), amplitude)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      vibrator.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_MEDIA))
+    } else {
+      @Suppress("DEPRECATION")
+      vibrator.vibrate(
+        effect,
+        AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build(),
+      )
+    }
   }
 
   override fun onDestroy() {

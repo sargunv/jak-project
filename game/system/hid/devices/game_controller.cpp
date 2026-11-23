@@ -1,5 +1,6 @@
 #include "game_controller.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <optional>
 #include <string>
@@ -8,6 +9,10 @@
 #include "game_controller.h"
 
 #include "game/system/hid/sdl_util.h"
+
+#ifdef __ANDROID__
+#include "game/android/activity.h"
+#endif
 
 #include "fmt/format.h"
 
@@ -41,6 +46,7 @@ SDL_GamepadButton face_button_in_layout(SDL_GamepadButton button) {
 #endif
   return button;
 }
+
 }  // namespace
 
 GameController::GameController(int sdl_device_id,
@@ -109,6 +115,15 @@ GameController::GameController(int sdl_device_id,
     m_is_dualsense = SDL_GetGamepadType(m_device_handle) == SDL_GAMEPAD_TYPE_PS5;
     clear_trigger_effect(dualsense_effects::TriggerEffectOption::BOTH);
   }
+#ifdef __ANDROID__
+  // Handhelds such as the AYN Thor have a built-in controller with no motor of its own, so SDL
+  // reports no rumble for it, and the device's vibrator stands in.
+  if (!m_has_rumble && android_has_vibrator()) {
+    m_uses_device_vibrator = true;
+    m_has_rumble = true;
+    lg::info("{} has no rumble, so it uses the device's vibrator", m_device_name);
+  }
+#endif
 
   if (m_settings->controller_binds.find(m_guid) == m_settings->controller_binds.end()) {
     m_settings->controller_binds[m_guid] = DEFAULT_CONTROLLER_BINDS;
@@ -307,9 +322,29 @@ void GameController::close_device() {
     SDL_CloseGamepad(m_device_handle);
     m_device_handle = NULL;
   }
+#ifdef __ANDROID__
+  if (m_uses_device_vibrator && m_vibrator_strength > 0) {
+    android_vibrate(0, 0);
+  }
+#endif
 }
 
 int GameController::send_rumble(const u8 low_rumble, const u8 high_rumble) {
+#ifdef __ANDROID__
+  if (m_uses_device_vibrator) {
+    // One motor for both of the PS2's. The game sends this every frame, so the vibrator only hears
+    // about changes, and a renewal before each 100 ms vibration ends.
+    const float strength = std::max(low_rumble, high_rumble) / 255.f;
+    const Uint64 now = SDL_GetTicks();
+    if (strength == m_vibrator_strength && (strength == 0 || now - m_vibrator_sent_ms < 80)) {
+      return 0;
+    }
+    m_vibrator_strength = strength;
+    m_vibrator_sent_ms = now;
+    android_vibrate(strength, 100);
+    return 0;
+  }
+#endif
   if (m_has_rumble && m_device_handle) {
     // https://wiki.libsdl.org/SDL3/SDL_RumbleGamepad
     // Arbitrary duration, since it's called every frame anyway, just so the vibration doesn't last

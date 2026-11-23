@@ -51,4 +51,10 @@ class GameController : public InputDevice {
   bool m_has_pressure_sensitive_buttons = false;
   bool m_is_dualsense;
   bool m_has_trigger_rumble;
+#ifdef __ANDROID__
+  // Rumble goes to the device's own vibrator, for a built-in controller without a motor
+  bool m_uses_device_vibrator = false;
+  float m_vibrator_strength = 0;
+  Uint64 m_vibrator_sent_ms = 0;
+#endif
 };

@@ -5,6 +5,10 @@
 
 #include "sdl_util.h"
 
+#ifdef __ANDROID__
+#include "game/android/activity.h"
+#endif
+
 #include "common/global_profiler/GlobalProfiler.h"
 
 #include "fmt/format.h"
@@ -22,6 +26,9 @@ DisplayManager::DisplayManager(SDL_Window* window) : m_window(window) {
 #endif
     update_curr_display_info();
     update_video_modes();
+#ifdef __ANDROID__
+    m_max_refresh_rate = android_max_refresh_rate();
+#endif
     // TODO - might be a good idea to end if no monitor is connected but...?
     // Load from file now (after initializing current window settings)
     m_display_settings.load_settings();
@@ -170,6 +177,13 @@ std::string DisplayManager::get_connected_display_name(int id) {
 }
 
 int DisplayManager::get_active_display_refresh_rate() {
+#ifdef __ANDROID__
+  // The display runs at the game's frame rate (android_set_frame_rate in activity.cpp), such as 60
+  // Hz on a 120 Hz screen, so the menus ask for the fastest the screen can go.
+  if (m_max_refresh_rate > 0) {
+    return m_max_refresh_rate;
+  }
+#endif
   const auto display_index = get_active_display_index();
   if (m_current_display_modes.size() > display_index) {
     return round(m_current_display_modes.at(display_index).refresh_rate);
@@ -531,6 +545,19 @@ void DisplayManager::update_resolutions() {
     m_available_resolutions.push_back(new_res);
     m_available_window_sizes.push_back(new_res);
   }
+
+#ifdef __ANDROID__
+  // The window always fills the screen, and SDL lists no other modes. The game renders at the
+  // resolution picked in its menu and scales it to the window, so offer smaller sizes of the screen
+  // too, for GPUs that can't fill every pixel at full speed.
+  for (const int percent : {100, 75, 50}) {
+    const int width = active_display_mode.screen_width * percent / 100 / 2 * 2;
+    const int height = active_display_mode.screen_height * percent / 100 / 2 * 2;
+    const Resolution size = {width, height, static_cast<float>(width) / static_cast<float>(height)};
+    m_available_resolutions.push_back(size);
+    m_available_window_sizes.push_back(size);
+  }
+#endif
 
   // Sort by area
   std::sort(m_available_resolutions.begin(), m_available_resolutions.end(),

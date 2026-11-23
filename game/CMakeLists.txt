@@ -388,7 +388,8 @@ add_subdirectory(sound)
 # we build the runtime as a static library.
 if(ANDROID)
     # Android only has OpenGL ES
-    add_library(runtime STATIC ${RUNTIME_SOURCE} "../third-party/glad-gles/src/glad.c")
+    add_library(runtime STATIC ${RUNTIME_SOURCE} android/activity.cpp
+        "../third-party/glad-gles/src/glad.c")
     target_compile_definitions(runtime PUBLIC OG_GLES)
 else()
     add_library(runtime STATIC ${RUNTIME_SOURCE} "../third-party/glad/src/glad.c")
