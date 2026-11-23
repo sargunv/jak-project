@@ -21,11 +21,18 @@ GPUTestOutput run_gpu_test(const std::string& test_type) {
                 sdl_util::log_and_return_error("SDL initialization failed")};
       return output;
     }
+#ifdef OG_GLES
+    // The same context the game asks for
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #ifdef __APPLE__
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#endif
 #endif
     SDL_Window* window =
         SDL_CreateWindow("OpenGL Version", 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);

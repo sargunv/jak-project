@@ -111,12 +111,45 @@ inline void og_glTexImage2DMultisample(GLenum target,
 }
 #define glTexImage2DMultisample og_glTexImage2DMultisample
 
-// Only debug texture dumps read textures back. TODO: read through a framebuffer with glReadPixels.
+// OpenGL ES can't read a texture directly. Attach it to a framebuffer and read that. Only debug
+// texture dumps read textures back: level 0 of a 2D texture, as GL_RGBA or GL_RED bytes.
 inline void og_glGetTexImage(GLenum target, GLint level, GLenum format, GLenum type, void* pixels) {
-  (void)target;
-  (void)level;
-  (void)format;
-  (void)type;
-  (void)pixels;
+  if (target != GL_TEXTURE_2D || type != GL_UNSIGNED_BYTE ||
+      (format != GL_RGBA && format != GL_RED)) {
+    fprintf(stderr, "glGetTexImage: unsupported read of format 0x%X type 0x%X on OpenGL ES\n",
+            format, type);
+    return;
+  }
+  GLint texture = 0, width = 0, height = 0, old_framebuffer = 0;
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+  glGetTexLevelParameteriv(target, level, GL_TEXTURE_WIDTH, &width);
+  glGetTexLevelParameteriv(target, level, GL_TEXTURE_HEIGHT, &height);
+  glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &old_framebuffer);
+
+  GLuint framebuffer = 0;
+  glGenFramebuffers(1, &framebuffer);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+  glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, target, texture, level);
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
+  GLint old_alignment = 4;
+  glGetIntegerv(GL_PACK_ALIGNMENT, &old_alignment);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  if (glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    fprintf(stderr, "glGetTexImage: can't read texture %d on OpenGL ES\n", texture);
+  } else if (format == GL_RGBA) {
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+  } else {
+    // OpenGL ES only promises RGBA reads, so read RGBA and keep red.
+    const size_t count = (size_t)width * height;
+    uint8_t* rgba = new uint8_t[count * 4];
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    for (size_t i = 0; i < count; i++) {
+      static_cast<uint8_t*>(pixels)[i] = rgba[i * 4];
+    }
+    delete[] rgba;
+  }
+  glPixelStorei(GL_PACK_ALIGNMENT, old_alignment);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, old_framebuffer);
+  glDeleteFramebuffers(1, &framebuffer);
 }
 #define glGetTexImage og_glGetTexImage
