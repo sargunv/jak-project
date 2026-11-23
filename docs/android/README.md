@@ -48,6 +48,19 @@ mise run android:logcat
 `mise run android:native` compiles `libmain.so` for both ABIs without Gradle,
 which is the fastest way to check that native changes compile.
 
+### Graphics
+
+- `mise run shaders:check` compiles every shader for desktop OpenGL and OpenGL
+  ES in a few seconds, without a GPU, and shows whether a shader change affects
+  desktop rendering. [SHADERS.md](SHADERS.md) explains the porting rules.
+- `mise run render:compare` boots each level on the desktop build (no window)
+  and the adb device, takes screenshots of the same frames, and writes
+  `out/render-compare/report.md` with side-by-side sheets and the shaders that
+  drew each frame. `--places training-start,village1-hut` picks continue points.
+  It needs `mise run desktop:build` and current data on the device.
+- `OG_SCREENSHOT_FRAMES=600,1200` makes either build save screenshots of those
+  game frames (`android:run --env` passes it on Android).
+
 `android:run` takes the game's arguments with `--args`, such as
 `--args "-boot -fakeiso -debug"`. Without `-boot`, the game waits for the REPL.
 The REPL should reach it through `adb forward tcp:8112 tcp:8112` (8113 for Jak

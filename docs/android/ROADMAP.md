@@ -7,10 +7,9 @@ handheld such as the AYN Thor. Jak 2 and Jak 3 come after Jak 1.
 
 - `libmain.so` builds for `arm64-v8a` and `x86_64` with NDK r30. The APK
   packages both. Pages are 16 KB aligned.
-- On `x86_64` in Innkeeper, the app starts and SDL runs the runtime's own
-  `main`. It finds the game data, creates an OpenGL ES 3.2 context (ANGLE on
-  Vulkan) and loads OpenGL. Then it stops at the first shader that doesn't
-  compile as GLSL ES.
+- On `x86_64` in Innkeeper, Jak 1 renders: the title screen and every level the
+  render comparison visits look the same as the desktop build. Nothing has been
+  played yet: input, audio and the rest of milestone 2 are next.
 - The desktop build still builds, and `goalc-test` passes (1669 tests).
 - Nothing has run on `arm64-v8a` yet.
 
@@ -58,28 +57,30 @@ Graphics:
       `GL_EXT_multi_draw_arrays` or a loop, `glTexStorage2DMultisample`,
       wireframe through `GL_NV_polygon_mode` where it exists, and anisotropy
       enums from `GL_EXT_texture_filter_anisotropic`.
-- [x] The shader loader swaps `#version 410 core` for `#version 320 es` with
-      default precisions. ImGui uses its OpenGL ES 3 backend.
+- [x] All 92 shaders build for both desktop GLSL 4.10 and GLSL ES 3.20 from one
+      source. The loader replaces each shader's `#version` line with a prelude
+      for the API (`prelude_desktop.glsl`, `prelude_gles.glsl`), which defines
+      macros for 1D textures and `noperspective`. Every changed shader compiles
+      to the same desktop SPIR-V as upstream's. See [SHADERS.md](SHADERS.md).
+- [x] ImGui uses its OpenGL ES 3 backend.
+
+Tools:
+
+- [x] `mise run shaders:check` compiles every shader for both APIs with glslang
+      and compares desktop SPIR-V with upstream.
+- [x] `mise run render:compare` renders the same frames of each level on the
+      desktop build and the adb device, with the shaders that drew each frame.
+- [x] Fixed upstream: gk's `--port` was parsed but the listener ignored it.
 
 ## Milestone 1: renders on x86_64
 
 Innkeeper and the emulator run the x86-64 object code, so the platform layer and
 the renderer can be finished before any arm64 hardware is involved.
 
-- [ ] **Port the shaders to GLSL ES 3.20.** 38 of the 46 programs fail to
-      compile. Almost every error is an implicit conversion that desktop GLSL
-      allows and GLSL ES doesn't: `x * 2` with a float `x`, `uint == 0`. Write
-      `2.0` and `0u` in the shader sources, which desktop GLSL 4.10 accepts too,
-      so both builds share one set of shaders. Other errors:
-  - `sampler1D` in 6 shaders (`tfrag3`, `shrub`, and others). On OpenGL ES the
-    texture is already 2D one texel high (`gles_compat.h`). The shaders need
-    `sampler2D` with `texelFetch(t, ivec2(i, 0), 0)` there, through a macro the
-    loader defines, or 2D textures on desktop too.
-  - `noperspective` (`sky`) is reserved in GLSL ES. Drop it on OpenGL ES, or use
-    `GL_NV_shader_noperspective_interpolation`.
-  - `debug_red` has text before `#version`. The loader should put the header on
-    the first line whatever comes before it.
-  - `pow`, `mod` and a helper (`logtest`) called with integer arguments.
+- [ ] **`glDrawBuffers` errors at startup.** OpenGL ES requires entry `i` to be
+      `GL_COLOR_ATTACHMENTi` or `GL_NONE`, and ANGLE reports
+      `GL_INVALID_OPERATION` 7 times at startup. Find the call and reorder its
+      attachments on OpenGL ES.
 - [ ] **Turn on GL debug output** (`KHR_debug` is core in OpenGL ES 3.2) and fix
       what it reports at runtime. Likely: unsized or invalid internal formats in
       `glTexImage2D` (OpenGL ES only accepts some format and type pairs),
@@ -93,6 +94,15 @@ the renderer can be finished before any arm64 hardware is involved.
 - [ ] The display manager lists monitors and fullscreen modes. On Android
       there's one fullscreen window, so hide those settings and add a
       render-scale setting.
+- [ ] Pixel-exact render comparisons. Frame numbers don't line up the game state
+      between builds, so the comparison shows the same place from slightly
+      different moments. Capturing a frame's DMA chain on one build and
+      replaying it on both would give identical input. The renderer also loads
+      level data asynchronously, which replay would have to wait for.
+      `FixedChunkDmaCopier` has an unused `serialize_last_result` to start from.
+- [ ] The sky's `noperspective` falls back to perspective interpolation where
+      the driver lacks `GL_NV_shader_noperspective_interpolation`. Check the sky
+      on Adreno.
 - [ ] `--gpu-test` still asks for desktop OpenGL 4.3 in its context attributes.
 - [ ] Log colors before `--disable-ansi` takes effect: the first few log lines
       still have ANSI escapes.
@@ -103,8 +113,10 @@ the renderer can be finished before any arm64 hardware is involved.
       controls to the game as a gamepad. Check the mapping, and that Back and
       Select+Start reach the pause menu (`SDL_ANDROID_TRAP_BACK_BUTTON`). Phones
       need a touch overlay.
-- [ ] **Audio.** cubeb builds with its AAudio and OpenSL ES backends. Check
-      playback, latency, and that sound pauses in the background.
+- [ ] **Audio.** cubeb builds with its AAudio and OpenSL ES backends, but logs
+      `Cubeb init failed` in Innkeeper (the desktop's offscreen runs log it too,
+      with no audio device). Check playback on the emulator and a device,
+      latency, and that sound pauses in the background.
 - [ ] **Lifecycle.** When the app goes to the background, the EE and IOP threads
       have to pause with SDL, the EGL surface comes back on resume, and settings
       and saves have to be written first. Check that a long pause doesn't cause
