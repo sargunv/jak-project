@@ -21,6 +21,12 @@ void snd_StartSoundSystem() {
   }
 }
 
+void snd_SetOutputPaused(bool paused) {
+  if (player) {
+    player->SetOutputPaused(paused);
+  }
+}
+
 void snd_StopSoundSystem() {
   if (player) {
     player.reset();

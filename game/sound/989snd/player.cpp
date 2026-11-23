@@ -38,7 +38,21 @@ void Player::InitCubeb() {
   }
 #endif
 
-  cubeb_init(&mCtx, "OpenGOAL", nullptr);
+#ifdef __ANDROID__
+  // cubeb tries OpenSL ES first, and its latency query needs Java APIs that cubeb can't reach
+  // outside Firefox. AAudio, on every Android version the app supports, works on its own.
+  s32 err = cubeb_init(&mCtx, "OpenGOAL", "aaudio");
+  if (err != CUBEB_OK) {
+    err = cubeb_init(&mCtx, "OpenGOAL", nullptr);
+  }
+#else
+  s32 err = cubeb_init(&mCtx, "OpenGOAL", nullptr);
+#endif
+  if (err != CUBEB_OK) {
+    lg::error("Cubeb init failed: cubeb_init returned {}", err);
+    return;
+  }
+  lg::info("Cubeb backend: {}", cubeb_get_backend_id(mCtx));
 
   cubeb_stream_params outparam = {};
   outparam.channels = 2;
@@ -47,25 +61,34 @@ void Player::InitCubeb() {
   outparam.layout = CUBEB_LAYOUT_STEREO;
   outparam.prefs = CUBEB_STREAM_PREF_NONE;
 
-  s32 err = 0;
   u32 latency = 0;
   err = cubeb_get_min_latency(mCtx, &outparam, &latency);
   if (err != CUBEB_OK) {
-    lg::error("Cubeb init failed");
+    lg::error("Cubeb init failed: cubeb_get_min_latency returned {}", err);
     return;
   }
 
   err = cubeb_stream_init(mCtx, &mStream, "OpenGOAL", nullptr, nullptr, nullptr, &outparam, latency,
                           &sound_callback, &state_callback, this);
   if (err != CUBEB_OK) {
-    lg::error("Cubeb init failed");
+    lg::error("Cubeb init failed: cubeb_stream_init returned {}", err);
     return;
   }
 
   err = cubeb_stream_start(mStream);
   if (err != CUBEB_OK) {
-    lg::error("Cubeb init failed");
+    lg::error("Cubeb init failed: cubeb_stream_start returned {}", err);
     return;
+  }
+}
+
+void Player::SetOutputPaused(bool paused) {
+  if (!mStream) {
+    return;
+  }
+  const s32 err = paused ? cubeb_stream_stop(mStream) : cubeb_stream_start(mStream);
+  if (err != CUBEB_OK) {
+    lg::error("Cubeb couldn't {} the stream: {}", paused ? "stop" : "start", err);
   }
 }
 

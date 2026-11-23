@@ -31,6 +31,7 @@
 #include "game/graphics/texture/TexturePool.h"
 #include "game/runtime.h"
 #include "game/sce/libscf.h"
+#include "game/sound/sndshim.h"
 #include "game/system/hid/input_manager.h"
 #include "game/system/hid/sdl_util.h"
 
@@ -329,6 +330,24 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
   return std::static_pointer_cast<GfxDisplay>(display);
 }
 
+#ifdef __ANDROID__
+namespace {
+/*!
+ * Stops audio while the app is in the background. SDL blocks the render thread while the app is
+ * paused, and the game waits for the render thread, but sound plays from its own thread. An event
+ * watch runs when SDL queues the event, before the render thread blocks.
+ */
+bool SDLCALL pause_audio_in_background(void* /*userdata*/, SDL_Event* event) {
+  if (event->type == SDL_EVENT_WILL_ENTER_BACKGROUND) {
+    snd_SetOutputPaused(true);
+  } else if (event->type == SDL_EVENT_DID_ENTER_FOREGROUND) {
+    snd_SetOutputPaused(false);
+  }
+  return true;
+}
+}  // namespace
+#endif
+
 GLDisplay::GLDisplay(SDL_Window* window, SDL_GLContext gl_context, bool is_main)
     : m_window(window),
       m_gl_context(gl_context),
@@ -336,6 +355,11 @@ GLDisplay::GLDisplay(SDL_Window* window, SDL_GLContext gl_context, bool is_main)
       m_input_manager(std::make_shared<InputManager>(window)) {
   m_main = is_main;
   m_display_manager->set_input_manager(m_input_manager);
+#ifdef __ANDROID__
+  if (m_main) {
+    SDL_AddEventWatch(pause_audio_in_background, nullptr);
+  }
+#endif
   // Register commands
   m_input_manager->register_command(
       CommandBinding::Source::KEYBOARD,
@@ -454,6 +478,11 @@ void GLDisplay::draw_splash(int fb_w, int fb_h) {
 }
 
 GLDisplay::~GLDisplay() {
+#ifdef __ANDROID__
+  if (m_main) {
+    SDL_RemoveEventWatch(pause_audio_in_background, nullptr);
+  }
+#endif
   if (m_splash_texture)
     glDeleteTextures(1, &m_splash_texture);
   if (m_splash_program)
@@ -720,6 +749,17 @@ void GLDisplay::render() {
       game_res_w = 640;
       game_res_h = 480;
     }
+#ifdef __ANDROID__
+    // Phone screens can have more pixels than their GPUs can fill at full speed. The app passes
+    // a render scale, and the renderer scales the smaller image up to the screen.
+    static const float render_scale = [] {
+      const char* env = std::getenv("OG_RENDER_SCALE");
+      const float scale = env ? std::strtof(env, nullptr) : 1.f;
+      return scale > 0.f && scale <= 1.f ? scale : 1.f;
+    }();
+    game_res_w = std::max(1, static_cast<int>(game_res_w * render_scale));
+    game_res_h = std::max(1, static_cast<int>(game_res_h * render_scale));
+#endif
     // set the size of the visible/playable portion of the game in the window
     get_display_manager()->set_game_size(Gfx::g_global_settings.lbox_w,
                                          Gfx::g_global_settings.lbox_h);

@@ -48,6 +48,8 @@ class Player {
   void SetGlobalExcite(u8 value) { GlobalExcite = value; };
   bool SoundStillActive(u32 sound_id);
   void SetMasterVolume(u32 group, s32 volume);
+  // Stop or restart audio output, such as while the app is in the background on Android
+  void SetOutputPaused(bool paused);
   void UnloadBank(BankHandle bank_handle);
   void StopSound(u32 sound_handle);
   u32 GetSoundID(u32 sound_handle);

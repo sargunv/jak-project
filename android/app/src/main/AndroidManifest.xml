@@ -19,7 +19,12 @@
     android:hardwareAccelerated="true"
     android:isGame="true"
     android:appCategory="game"
+    android:enableOnBackInvokedCallback="false"
     android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+
+    <!-- Back pauses the game instead of closing it (InputManager::process_sdl_event). SDL gets
+         Back through onBackPressed, which needs predictive back turned off above. -->
+    <meta-data android:name="SDL_ENV.SDL_ANDROID_TRAP_BACK_BUTTON" android:value="1" />
 
     <activity
       android:name=".GameActivity"

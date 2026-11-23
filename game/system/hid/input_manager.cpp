@@ -178,6 +178,13 @@ void InputManager::hide_cursor(const bool hide_cursor) {
 }
 
 void InputManager::process_sdl_event(const SDL_Event& event) {
+#ifdef __ANDROID__
+  // Back (the button or the gesture) pauses, whichever controls are enabled. A tap can be shorter
+  // than a frame, so hold START long enough for the game to see it.
+  if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_AC_BACK && !event.key.repeat) {
+    m_back_button_frames = 6;
+  }
+#endif
   // TODO - perhaps should handle `SDL_CONTROLLERDEVICEREMAPPED`?
   // Detect controller connections and disconnects
   if (sdl_util::is_any_event_type(event.type,
@@ -254,6 +261,10 @@ void InputManager::clear_mouse_actions() {
 }
 
 void InputManager::finish_polling() {
+  if (m_back_button_frames > 0 && m_data.find(0) != m_data.end()) {
+    m_back_button_frames--;
+    m_data.at(0)->button_data.at(PadData::ButtonIndex::START) = m_back_button_frames > 0;
+  }
   m_skip_polling_for_n_frames--;
   if (m_skip_polling_for_n_frames < 0) {
     m_skip_polling_for_n_frames = 0;

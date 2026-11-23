@@ -22,6 +22,7 @@ using BankHandle = SoundBank*;
 
 void snd_StartSoundSystem();
 void snd_StopSoundSystem();
+void snd_SetOutputPaused(bool paused);
 s32 snd_GetTick();
 void snd_RegisterIOPMemAllocator(AllocFun alloc, FreeFun free);
 int snd_LockVoiceAllocator(bool block);

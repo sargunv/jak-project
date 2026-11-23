@@ -44,6 +44,10 @@ DisplayManager::~DisplayManager() {
 }
 
 void DisplayManager::initialize_window_position_from_settings() {
+#ifdef __ANDROID__
+  // the window always fills the screen
+  return;
+#endif
   // Check that the display id is still valid
   // Not to be confused with the new SDL_DisplayId, this is more like the display_index
   if (m_display_settings.display_id >= m_current_display_modes.size()) {
@@ -216,6 +220,12 @@ void DisplayManager::enqueue_set_window_size(int width, int height) {
 }
 
 void DisplayManager::set_window_size(int width, int height) {
+#ifdef __ANDROID__
+  // the window always fills the screen
+  (void)width;
+  (void)height;
+  return;
+#endif
   SDL_SetWindowSize(m_window, width, height);
 }
 
@@ -232,6 +242,12 @@ void DisplayManager::set_display_mode(game_settings::DisplaySettings::DisplayMod
                                       const int window_height) {
   lg::info("[DISPLAY] Setting to display mode: {}, with window_size: {},{}", static_cast<int>(mode),
            window_width, window_height);
+#ifdef __ANDROID__
+  // The window always fills the screen, so only remember the choice.
+  m_display_settings.display_mode = mode;
+  m_display_settings.save_settings();
+  return;
+#endif
   // https://wiki.libsdl.org/SDL3/SDL_SetWindowFullscreen
   int result = 0;
   switch (mode) {

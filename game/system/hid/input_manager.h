@@ -170,6 +170,8 @@ class InputManager {
   std::unordered_map<int, int> m_controller_port_mapping;
   /// The port that the keyboard and mouse will be used for PadData
   int m_keyboard_and_mouse_port = 0;
+  // Android's Back button pauses the game: a tap holds START for this many more frames
+  int m_back_button_frames = 0;
   /// Collection of arbitrary commands to run on user actions
   CommandBindingGroups m_command_binds;
 
