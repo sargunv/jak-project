@@ -29,6 +29,7 @@
 
 #include "third-party/imgui/imgui.h"
 #include "third-party/imgui/imgui_stdlib.h"
+#include "third-party/json.hpp"
 
 // for the vif callback
 #include "game/kernel/common/kmachine.h"
@@ -984,6 +985,8 @@ void OpenGLRenderer::blit_display(ScopedProfilerNode& prof) {
 void OpenGLRenderer::render(DmaFollower dma, const RenderOptions& settings) {
   m_profiler.clear();
   m_render_state.reset();
+  // count only this frame's shader activations, for the screenshot's shader list
+  m_render_state.shaders.take_activation_counts();
   m_render_state.ee_main_memory = g_ee_main_mem;
   m_render_state.offset_of_s7 = offset_of_s7();
 
@@ -1071,6 +1074,14 @@ void OpenGLRenderer::render(DmaFollower dma, const RenderOptions& settings) {
     }
     finish_screenshot(settings.screenshot_path, w, h, x, y, fbo_id, read_buffer,
                       settings.quick_screenshot);
+
+    // Next to the screenshot, the shaders that drew it: frame.png -> frame.shaders.json
+    nlohmann::json shaders = nlohmann::json::object();
+    for (auto& [name, count] : m_render_state.shaders.take_activation_counts()) {
+      shaders[name] = count;
+    }
+    auto shader_list_path = fs::path(settings.screenshot_path).replace_extension(".shaders.json");
+    file_util::write_text_file(shader_list_path, shaders.dump(2));
   }
 
   if (settings.draw_render_debug_window) {

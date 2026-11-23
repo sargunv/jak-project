@@ -1,9 +1,18 @@
 #pragma once
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "common/common_types.h"
 #include "common/versions/versions.h"
+
+/*!
+ * Put the prelude for the current OpenGL API (prelude_desktop.glsl or prelude_gles.glsl) in place
+ * of the shader's own #version line. The preludes define the macros that let one shader source
+ * build for both desktop OpenGL and OpenGL ES.
+ */
+std::string shader_source_for_context(const std::string& source);
 
 class Shader {
  public:
@@ -13,9 +22,15 @@ class Shader {
   void activate() const;
   bool okay() const { return m_is_okay; }
   u64 id() const { return m_program; }
+  const std::string& name() const { return m_name; }
+
+  // How many times activate() ran since the last reset, to see which shaders draw a frame
+  u32 activations() const { return m_activations; }
+  void reset_activations() { m_activations = 0; }
 
  private:
   std::string m_name;
+  mutable u32 m_activations = 0;
   u64 m_frag_shader = 0;
   u64 m_vert_shader = 0;
   u64 m_program = 0;
@@ -77,6 +92,12 @@ class ShaderLibrary {
   ShaderLibrary(GameVersion version);
   Shader& operator[](ShaderId id) { return m_shaders[(int)id]; }
   Shader& at(ShaderId id) { return m_shaders[(int)id]; }
+
+  /*!
+   * The shaders activated since the last call, by name, with how many times each was activated.
+   * Renderers that call glUseProgram themselves (the texture animator) aren't counted.
+   */
+  std::vector<std::pair<std::string, u32>> take_activation_counts();
 
  private:
   Shader m_shaders[(int)ShaderId::MAX_SHADERS];

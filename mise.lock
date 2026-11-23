@@ -34,6 +34,14 @@ checksum = "sha256:03b54d7008de080a17cc2174b0e4acd6d06e1c981b2eb19846f46d8f59966
 url = "https://conda.anaconda.org/conda-forge/linux-64/libgomp-16.2.0-he0feb66_7.conda"
 checksum = "sha256:92a0bb350c7be6a4eedcb4e111c60aefd176018e6b1c009a6e025dbe9bbcd758"
 
+[conda-packages.linux-x64."libstdcxx-16.2.0-h934c35e_7"]
+url = "https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-16.2.0-h934c35e_7.conda"
+checksum = "sha256:fa7018298629fc429971fffd6ecba3d27a7b02e4e890d6a93ea01ffebe8cb745"
+
+[conda-packages.linux-x64."spirv-tools-2026.4-h7148c6a_2"]
+url = "https://conda.anaconda.org/conda-forge/linux-64/spirv-tools-2026.4-h7148c6a_2.conda"
+checksum = "sha256:e8791349946b2c98ffa5cc67cf1525931e066aef8a01800d6f7c151444a3f052"
+
 [conda-packages.windows-x64."ucrt-10.0.26100.0-h57928b3_0"]
 url = "https://conda.anaconda.org/conda-forge/win-64/ucrt-10.0.26100.0-h57928b3_0.conda"
 checksum = "sha256:3005729dce6f3d3f5ec91dfc49fc75a0095f9cd23bab49efb899657297ac91a5"
@@ -86,6 +94,31 @@ checksum = "sha256:bfe6eadb245dc8213e0d3feea316b520cb2aae92f5667ffd76059ba6b05c4
 checksum_source = "mise-versions"
 url = "https://github.com/Kitware/CMake/releases/download/v4.5.1/cmake-4.5.1-windows-x86_64.zip"
 url_api = "https://api.github.com/repos/Kitware/CMake/releases/assets/768373732"
+
+[[tools."aqua:astral-sh/ruff"]]
+version = "0.17.6"
+backend = "aqua:astral-sh/ruff"
+specifiers = [
+    "0.17.6",
+    "latest",
+]
+
+[tools."aqua:astral-sh/ruff"."platforms.linux-x64"]
+checksum = "sha256:94b33791f48cd54ab35ad673a443a5c001d3e6d87effeaba9899070b700d45f3"
+url = "https://github.com/astral-sh/ruff/releases/download/0.17.6/ruff-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/ruff/releases/assets/768307340"
+provenance = "github-attestations"
+
+[[tools."aqua:astral-sh/uv"]]
+version = "0.13.9"
+backend = "aqua:astral-sh/uv"
+specifiers = ["latest"]
+
+[tools."aqua:astral-sh/uv"."platforms.linux-x64"]
+checksum = "sha256:a7fbaff2b9a271d85c1bdb540941090fd1ce011797b4abeb48e4dcd39c2471d5"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.9/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/758513954"
+provenance = "github-attestations"
 
 [[tools."aqua:dprint/dprint"]]
 version = "0.65.0"
@@ -276,6 +309,28 @@ checksum_source = "mise-versions"
 url = "https://github.com/ninja-build/ninja/releases/download/v1.13.2/ninja-win.zip"
 url_api = "https://api.github.com/repos/ninja-build/ninja/releases/assets/318863577"
 
+[[tools."conda:glslang"]]
+version = "16.6.0"
+backend = "conda:glslang"
+specifiers = [
+    "16.6.0",
+    "latest",
+]
+
+[tools."conda:glslang".options]
+channel = "conda-forge"
+
+[tools."conda:glslang"."platforms.linux-x64"]
+checksum = "sha256:390b9e94b29b53366673e5460b433c9daa34788f5cdabf8b30bf40cf086c60dd"
+url = "https://conda.anaconda.org/conda-forge/linux-64/glslang-16.6.0-h980caa0_0.conda"
+conda_deps = [
+    "libgcc-16.2.0-ha9f2e26_7",
+    "libstdcxx-16.2.0-h934c35e_7",
+    "spirv-tools-2026.4-h7148c6a_2",
+    "_openmp_mutex-4.5-20_gnu",
+    "libgomp-16.2.0-he0feb66_7",
+]
+
 [[tools."conda:nasm"]]
 version = "2.16.03"
 backend = "conda:nasm"
@@ -322,6 +377,27 @@ conda_deps = [
     "vcomp14-14.51.36247-h1c3f1cb_44",
 ]
 
+[[tools."conda:spirv-tools"]]
+version = "2026.4"
+backend = "conda:spirv-tools"
+specifiers = [
+    "2026.4",
+    "latest",
+]
+
+[tools."conda:spirv-tools".options]
+channel = "conda-forge"
+
+[tools."conda:spirv-tools"."platforms.linux-x64"]
+checksum = "sha256:e8791349946b2c98ffa5cc67cf1525931e066aef8a01800d6f7c151444a3f052"
+url = "https://conda.anaconda.org/conda-forge/linux-64/spirv-tools-2026.4-h7148c6a_2.conda"
+conda_deps = [
+    "libgcc-16.2.0-ha9f2e26_7",
+    "libstdcxx-16.2.0-h934c35e_7",
+    "_openmp_mutex-4.5-20_gnu",
+    "libgomp-16.2.0-he0feb66_7",
+]
+
 [[tools.java]]
 version = "zulu-25.38.201.0"
 backend = "core:java"
@@ -349,3 +425,16 @@ url = "https://cdn.azul.com/zulu/bin/zulu25.38.201-ca-jdk25.0.5.1-win_aarch64.zi
 [tools.java."platforms.windows-x64"]
 checksum = "sha256:01c1c4cfe8c0e04a22a46d3cd1ddd18b9db9fb2a1b0a88ffd90e0aa57420845e"
 url = "https://cdn.azul.com/zulu/bin/zulu25.38.201-ca-jdk25.0.5.1-win_x64.zip"
+
+[[tools.python]]
+version = "3.14.10"
+backend = "core:python"
+specifiers = [
+    "3.14",
+    "3.14.10",
+]
+
+[tools.python."platforms.linux-x64"]
+checksum = "blake3:72134056fa00e928fbd119d5d0533557dbc00bc1d9126d6991337415e694b177"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.14.10+20261110-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"

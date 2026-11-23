@@ -6,6 +6,24 @@
 
 #include "game/graphics/pipelines/opengl.h"
 
+std::string shader_source_for_context(const std::string& source) {
+#ifdef OG_GLES
+  constexpr const char* prelude_name = "prelude_gles.glsl";
+#else
+  constexpr const char* prelude_name = "prelude_desktop.glsl";
+#endif
+  static const std::string prelude =
+      file_util::read_text_file(file_util::get_file_path({Shader::shader_folder, prelude_name}));
+
+  // OpenGL ES requires #version on the first line, so the prelude goes first and the shader's own
+  // #version line becomes empty. #line keeps compile errors on the shader file's line numbers.
+  auto version = source.find("#version");
+  ASSERT_MSG(version != std::string::npos, "shader has no #version line");
+  auto line_end = source.find('\n', version);
+  auto rest = line_end == std::string::npos ? std::string() : source.substr(line_end);
+  return prelude + "\n#line 1\n" + source.substr(0, version) + rest;
+}
+
 Shader::Shader(const std::string& shader_name, GameVersion version) : m_name(shader_name) {
   const std::string height_scale = version == GameVersion::Jak1 ? "1.0" : "0.5";
   const std::string scissor_height = version == GameVersion::Jak1 ? "448.0" : "416.0";
@@ -22,21 +40,8 @@ Shader::Shader(const std::string& shader_name, GameVersion version) : m_name(sha
   frag_src = std::regex_replace(frag_src, std::regex("SCISSOR_HEIGHT"), scissor_height);
   vert_src = std::regex_replace(vert_src, std::regex("SCISSOR_ADJUST"), "(" + scissor_adjust + ")");
 
-#ifdef OG_GLES
-  // The shaders are written for desktop GLSL 4.10. OpenGL ES needs its own version line and
-  // default precisions.
-  const std::regex version_line("#version 410 core");
-  const std::string gles_header =
-      "#version 320 es\n"
-      "precision highp float;\n"
-      "precision highp int;\n"
-      "precision highp sampler2D;\n"
-      "precision highp usampler2D;\n"
-      "precision highp isampler2D;\n"
-      "precision highp sampler2DArray;\n";
-  vert_src = std::regex_replace(vert_src, version_line, gles_header);
-  frag_src = std::regex_replace(frag_src, version_line, gles_header);
-#endif
+  vert_src = shader_source_for_context(vert_src);
+  frag_src = shader_source_for_context(frag_src);
 
   m_vert_shader = glCreateShader(GL_VERTEX_SHADER);
   const char* src = vert_src.c_str();
@@ -103,7 +108,19 @@ Shader::Shader(const std::string& shader_name, GameVersion version) : m_name(sha
 
 void Shader::activate() const {
   ASSERT(m_is_okay);
+  m_activations++;
   glUseProgram(m_program);
+}
+
+std::vector<std::pair<std::string, u32>> ShaderLibrary::take_activation_counts() {
+  std::vector<std::pair<std::string, u32>> counts;
+  for (auto& shader : m_shaders) {
+    if (shader.activations()) {
+      counts.emplace_back(shader.name(), shader.activations());
+      shader.reset_activations();
+    }
+  }
+  return counts;
 }
 
 ShaderLibrary::ShaderLibrary(GameVersion version) {

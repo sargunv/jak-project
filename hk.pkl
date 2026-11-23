@@ -4,4 +4,9 @@ import "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Builtin
 // Only the files this fork adds. Upstream code keeps upstream's own formatting (`task format`).
 steps {
   ["dprint"] = Builtins.dprint
+  ["ruff"] {
+    glob = List("android/**/*.py")
+    check = "ruff check --config android/ruff.toml {{files}}"
+    fix = "ruff check --config android/ruff.toml --fix {{files}}"
+  }
 }

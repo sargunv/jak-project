@@ -6,13 +6,18 @@ lockfile_mode = "merge"
 
 [tools]
 "aqua:Kitware/CMake" = "4.5.1"
+"aqua:astral-sh/ruff" = "0.17.6"
+"aqua:astral-sh/uv" = "0.13.9"
 "aqua:dprint/dprint" = "0.65.0"
 "aqua:go-task/task" = "3.54.0"
 "aqua:jdx/hk" = "2.13.0"
 "aqua:jdx/jactionlint" = "2.6.0"
 "aqua:ninja-build/ninja" = "1.13.2"
+"conda:glslang" = "16.6.0"
 "conda:nasm" = "2.16.03"
+"conda:spirv-tools" = "2026.4"
 "core:java" = "zulu-25.38.201.0"
+"core:python" = "3.14.10"
 
 [env]
 ANDROID_HOME = "{{ env.ANDROID_HOME | default(value=env.HOME ~ '/Android/Sdk') }}"
@@ -79,12 +84,21 @@ description = "Start a game on the adb device"
 usage = '''
 arg "[game]" default="jak1"
 flag "--args <args>" default="-boot -fakeiso" help="Arguments for the game"
+flag "--env <env>" default="" help="Space-separated NAME=value environment variables for the runtime"
 '''
 run = """
 adb shell am force-stop dev.sargunv.opengoal
-adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game "${usage_game}" --es args "'${usage_args}'"
+adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game "${usage_game}" --es args "'${usage_args}'" --es env "'${usage_env}'"
 """
 
 [tasks."android:logcat"]
 description = "Follow the app's logs"
 run = "adb logcat -s OpenGOAL:V SDL:V DEBUG:V AndroidRuntime:E libc:F"
+
+[tasks."shaders:check"]
+description = "Compile every shader for desktop OpenGL and OpenGL ES, and compare desktop SPIR-V with upstream"
+run = "python3 android/scripts/check-shaders.py"
+
+[tasks."render:compare"]
+description = "Render the same frames of each level on desktop and on the adb device, and compare"
+run = "uv run --no-project --with pillow==12.1.0 python android/scripts/render-compare.py"

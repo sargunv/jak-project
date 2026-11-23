@@ -18,6 +18,10 @@
     "proseWrap": "always",
     "sortPackageJson": false,
   },
+  "ruff": {
+    "lineLength": 100,
+    "indentWidth": 4,
+  },
   "ktfmt": {
     "style": "google",
     "lineWidth": 100,
@@ -27,5 +31,6 @@
     "npm:@dprint/oxc@0.51.0",
     "npm:@dprint/exec@0.9.0/plugin.json@d4f708dc00798b51013ca4e7c26a86656bfb31e7255cdcde28a487f86813e34d",
     "https://plugins.dprint.dev/sargunv/ktfmt-0.65.0.json@d355d4440dda00c0e315b5c39669f417bcfa76b64b68591fa1818f7a1f6b1005",
+    "npm:@dprint/ruff@0.12.3",
   ],
 }
