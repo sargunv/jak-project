@@ -10,6 +10,7 @@
 #include "common/util/json_util.h"
 #include "common/util/read_iso_file.h"
 
+#include "decompiler/extractor/disc_image.h"
 #include "game/kernel/common/kboot.h"
 
 #include "third-party/json.hpp"
@@ -280,16 +281,18 @@ std::tuple<bool, ExtractorErrorCode> is_iso_file(fs::path path_to_supposed_iso) 
   // /proc/self/fd/N is an ISO that the parent process opened for us (FileUtil's open_file)
   std::string ext = path_to_supposed_iso.extension().string();
   const bool inherited = path_to_supposed_iso.string().rfind("/proc/self/fd/", 0) == 0;
-  if (!inherited && !std::regex_match(ext, std::regex("\\.(iso|ISO)"))) {
+  if (!inherited && !std::regex_match(ext, std::regex("\\.(iso|ISO|chd|CHD)"))) {
     lg::error("Provided game data path contains a file that isn't a .ISO!");
     return {false, ExtractorErrorCode::EXTRACTION_INVALID_ISO_PATH};
   }
 
   // make sure the .iso is greater than 1GB in size
   // to-do: verify game header data as well
-  if (fs::file_size(path_to_supposed_iso) < 1000000000) {
+  // A CHD is compressed, so check the size of the ISO it holds
+  const auto size = disc_image_size(path_to_supposed_iso);
+  if (!size || *size < 1000000000) {
     lg::error("Provided game data file appears to be too small or corrupted! Size is: {}",
-              fs::file_size(path_to_supposed_iso));
+              size.value_or(0));
     return {false, ExtractorErrorCode::EXTRACTION_ISO_UNEXPECTED_SIZE};
   }
   return {true, ExtractorErrorCode::SUCCESS};

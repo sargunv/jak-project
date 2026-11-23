@@ -7,6 +7,7 @@
 
 #include "decompiler/config.h"
 #include "decompiler/decompilation_process.h"
+#include "decompiler/extractor/disc_image.h"
 #include "decompiler/extractor/extractor_util.h"
 #include "goalc/compiler/Compiler.h"
 
@@ -25,7 +26,7 @@ IsoFile extract_files(fs::path input_file_path, fs::path extracted_iso_path) {
 
   fs::create_directories(extracted_iso_path);
 
-  auto fp = file_util::open_file(input_file_path, "rb");
+  auto fp = open_disc_image(input_file_path);
   ASSERT_MSG(fp, "failed to open input ISO file");
   IsoFile iso = unpack_iso_files(fp, extracted_iso_path, true, true);
   fclose(fp);

@@ -35,6 +35,7 @@ add_library(
         Disasm/OpcodeInfo.cpp
         Disasm/Register.cpp
 
+        extractor/disc_image.cpp
         extractor/extractor_util.cpp
 
         Function/BasicBlocks.cpp
@@ -95,6 +96,7 @@ add_library(
         decompilation_process.cpp)
 
 target_link_libraries(decomp
+        chdr-static
         lzokay
         common
         fmt

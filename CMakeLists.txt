@@ -320,6 +320,13 @@ endif()
 build_third_party_lib(libco libco)
 build_third_party_lib(zstd libzstd_static)
 
+# libchdr reads CHD disc images for the extractor, with the zstd above
+set(CHDR_WANT_TESTS OFF CACHE BOOL "" FORCE)
+add_library(zstd ALIAS libzstd_static)
+build_third_party_lib(libchdr chdr-static)
+# The desktop links it into libdecomp.so
+set_target_properties(chdr-static chdr-lzma miniz PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # build SDL
 include(SDLOptions)
 if(STATICALLY_LINK)
