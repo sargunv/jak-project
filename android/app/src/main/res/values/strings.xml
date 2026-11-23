@@ -6,21 +6,21 @@
   <string name="game_jak2">Jak II</string>
   <string name="game_jak3">Jak 3</string>
 
-  <string name="library_footer">Games install from an ISO of your own disc. Installing converts the disc into the files the game runs on, which takes a few minutes.</string>
+  <string name="library_footer">Install games from ISO or CHD disc images.</string>
   <string name="game_installed">Ready to play · %1$s</string>
-  <string name="game_not_installed">Install from an ISO</string>
-  <string name="game_install_failed">Couldn\'t install. Tap for details.</string>
+  <string name="game_not_installed">Install from a disc image</string>
+  <string name="game_install_failed">Couldn\'t install</string>
   <string name="game_menu">More options</string>
   <string name="game_reinstall">Install again</string>
   <string name="game_delete">Delete</string>
 
   <string name="delete_title">Delete %1$s?</string>
-  <string name="delete_text">This deletes the game\'s data. Your saves and settings stay. You can install it again from its ISO.</string>
+  <string name="delete_text">Saves and settings will be kept.</string>
 
   <string name="install_step_prepare">Preparing</string>
-  <string name="install_step_extract">Copying files from the ISO</string>
-  <string name="install_step_decompile">Converting levels and art</string>
-  <string name="install_step_compile">Compiling the game</string>
+  <string name="install_step_extract">Extracting files</string>
+  <string name="install_step_decompile">Converting game data</string>
+  <string name="install_step_compile">Compiling</string>
   <string name="install_step_finish">Finishing</string>
   <string name="install_step_percent">%1$s · %2$d%%</string>
 
@@ -30,10 +30,10 @@
   <string name="install_failed_title">Couldn\'t install %1$s</string>
 
   <string name="error_title">Couldn\'t install %1$s</string>
-  <string name="error_space">There isn\'t enough free space. Installing needs about %1$s while it runs, and less once it\'s done.</string>
-  <string name="error_not_iso">That file isn\'t a complete ISO of a game disc.</string>
-  <string name="error_unknown_iso">That ISO isn\'t a supported copy of %1$s. Check that it\'s the right game, and that the dump isn\'t damaged.</string>
-  <string name="error_failed">The installer stopped with an error (status %1$d).</string>
+  <string name="error_space">Not enough storage. Installing needs %1$s free.</string>
+  <string name="error_not_iso">Not a complete ISO or CHD disc image.</string>
+  <string name="error_unknown_iso">Not a supported disc image of %1$s.</string>
+  <string name="error_failed">Installer error %1$d.</string>
   <string name="error_retry">Try again</string>
   <string name="error_close">Close</string>
 </resources>

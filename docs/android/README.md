@@ -54,14 +54,14 @@ which is the fastest way to check that native changes compile.
 
 ### Installing from an ISO
 
-The launcher (`MainActivity`) gets the ISO from the Storage Access Framework,
-which gives the app a file descriptor and no path. `InstallService` runs in the
-foreground with a notification, and `Installer` runs the extractor as a child
-process: Android only installs native code named `lib*.so`, so the APK ships the
-extractor executable as `libextractor.so`, and the app runs it from its native
-library folder. `libog_process.so` starts it with the ISO's descriptor as its
-descriptor 3, and the extractor reads `/proc/self/fd/3` through a copy of that
-descriptor (`file_util::open_file`).
+The launcher (`MainActivity`) gets the ISO or CHD from the Storage Access
+Framework, which gives the app a file descriptor and no path. `InstallService`
+runs in the foreground with a notification, and `Installer` runs the extractor
+as a child process: Android only installs native code named `lib*.so`, so the
+APK ships the extractor executable as `libextractor.so`, and the app runs it
+from its native library folder. `libog_process.so` starts it with the ISO's
+descriptor as its descriptor 3, and the extractor reads `/proc/self/fd/3`
+through a copy of that descriptor (`file_util::open_file`).
 
 The extractor works in `files/install/` with the files it needs from the APK
 (`goal_src/`, the decompiler's config, the assets), which takes about 2.5 times

@@ -3,6 +3,7 @@
 package dev.sargunv.opengoal.ui
 
 import android.text.format.Formatter
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,8 +32,10 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -230,7 +233,12 @@ private fun InstallProgressContent(progress: InstallProgress) {
     if (fraction == null) {
       LinearWavyProgressIndicator(modifier = modifier)
     } else {
-      LinearWavyProgressIndicator(progress = { fraction }, modifier = modifier)
+      // Each step starts from its own progress, instead of running back from the last step's end
+      key(progress.step) {
+        val animated by
+          animateFloatAsState(fraction, WavyProgressIndicatorDefaults.ProgressAnimationSpec)
+        LinearWavyProgressIndicator(progress = { animated }, modifier = modifier)
+      }
     }
   }
 }

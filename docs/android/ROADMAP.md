@@ -122,6 +122,16 @@ Launcher and install:
       which saved a second copy of the ISO's files.
 - [x] The game runs in its own process, since the runtime starts once per
       process.
+- [x] CHD disc images (`chdman createdvd` or `createcd`), which emulator users
+      keep their games in. libchdr decompresses them as the extractor reads,
+      through a `FILE` from `fopencookie` or `funopen`, so the ISO parser is the
+      same and no ISO is written. Linux, Android and macOS.
+
+On the AYN Thor (Android 13, Snapdragon 8 Gen 2, Adreno 740, 16 GB):
+
+- [x] Jak 1 installs from the CHD in the Thor's ROM folder in 104 s (75 s of it
+      decompressing the CHD), and plays from the launcher: it reaches the title
+      screen at 1920x1080.
 
 ## Milestone 1: renders on x86_64
 
@@ -129,8 +139,10 @@ Innkeeper and the emulator run the x86-64 object code, so the platform layer and
 the renderer can be finished before any arm64 hardware is involved.
 
 - [ ] GL debug output is on, and `render:compare` reports GL errors and warnings
-      per place. ANGLE reports none at the 13 places it visits; watch for more
-      on Adreno.
+      per place. ANGLE reports none at the 13 places it visits. Adreno reports
+      its own driver notes ("Packing allocations for resource") with type
+      0x7FFFFFFF, which the log calls errors: filter them.
+- [ ] The Thor shows its status bar over the game.
 - [ ] `glGetTexImage` is a no-op on OpenGL ES. Only debug texture dumps use it;
       read through a framebuffer with `glReadPixels` instead.
 - [ ] The game's own menus still offer display modes, monitors and resolutions,
