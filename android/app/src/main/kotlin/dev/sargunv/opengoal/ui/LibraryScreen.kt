@@ -29,7 +29,6 @@ import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -55,7 +54,6 @@ import dev.sargunv.opengoal.InstallError
 import dev.sargunv.opengoal.InstallProgress
 import dev.sargunv.opengoal.InstallStep
 import dev.sargunv.opengoal.R
-import dev.sargunv.opengoal.Settings
 import dev.sargunv.opengoal.label
 import kotlin.math.roundToInt
 
@@ -68,8 +66,6 @@ fun LibraryScreen(
   onCancelInstall: () -> Unit,
   onDelete: (Game) -> Unit,
   onDismissError: (Game) -> Unit,
-  settings: Settings,
-  onSettingsChange: ((Settings) -> Settings) -> Unit,
 ) {
   val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
   val installing = games.any { it.status is GameStatus.Installing }
@@ -125,20 +121,6 @@ fun LibraryScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
         }
-        item { SectionHeader(stringResource(R.string.controller_header)) }
-        item {
-          SegmentedListItem(
-            checked = settings.swapFaceButtons,
-            onCheckedChange = { swap -> onSettingsChange { it.copy(swapFaceButtons = swap) } },
-            shapes = ListItemDefaults.segmentedShapes(0, 1),
-            supportingContent = { Text(stringResource(R.string.swap_face_buttons_summary)) },
-            trailingContent = {
-              Switch(checked = settings.swapFaceButtons, onCheckedChange = null)
-            },
-          ) {
-            Text(stringResource(R.string.swap_face_buttons))
-          }
-        }
       }
     }
   }
@@ -174,16 +156,6 @@ fun LibraryScreen(
         },
       )
     }
-}
-
-@Composable
-private fun SectionHeader(text: String) {
-  Text(
-    text,
-    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
-    style = MaterialTheme.typography.titleSmall,
-    color = MaterialTheme.colorScheme.primary,
-  )
 }
 
 @Composable
@@ -380,8 +352,6 @@ private fun LibraryScreenPreview() {
       onCancelInstall = {},
       onDelete = {},
       onDismissError = {},
-      settings = Settings(),
-      onSettingsChange = {},
     )
   }
 }

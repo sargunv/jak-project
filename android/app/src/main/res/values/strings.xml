@@ -12,9 +12,6 @@
   <string name="game_install_failed">Couldn\'t install</string>
   <string name="game_menu">More options</string>
 
-  <string name="controller_header">Controller</string>
-  <string name="swap_face_buttons">Swap face buttons</string>
-  <string name="swap_face_buttons_summary">A with B, X with Y</string>
   <string name="game_reinstall">Install again</string>
   <string name="game_delete">Delete</string>
 

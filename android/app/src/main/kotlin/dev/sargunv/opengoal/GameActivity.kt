@@ -58,10 +58,6 @@ class GameActivity : SDLActivity() {
     // The runtime falls back to $HOME for anything not covered by --config-path.
     Os.setenv("HOME", filesDir.path, true)
 
-    // The launcher's settings
-    val settings = AppSettings.read(this)
-    if (settings.swapFaceButtons) Os.setenv("OG_SWAP_FACE_BUTTONS", "1", true)
-
     // Environment variables for the runtime, such as OG_SCREENSHOT_FRAMES=600,1200
     devExtra("env")?.split(' ')?.forEach { assignment ->
       val (name, value) = assignment.split('=', limit = 2).let { it[0] to it.getOrElse(1) { "" } }

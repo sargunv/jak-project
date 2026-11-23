@@ -3,7 +3,6 @@ package dev.sargunv.opengoal.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import dev.sargunv.opengoal.AppSettings
 import dev.sargunv.opengoal.Game
 import dev.sargunv.opengoal.GameFiles
 import dev.sargunv.opengoal.InstallError
@@ -11,7 +10,6 @@ import dev.sargunv.opengoal.InstallProgress
 import dev.sargunv.opengoal.InstallState
 import dev.sargunv.opengoal.Installer
 import dev.sargunv.opengoal.Installs
-import dev.sargunv.opengoal.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,7 +20,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 
 /** What the game list shows for each game. */
@@ -81,14 +78,6 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         Installer.cleanUpInterrupted(application)?.let { Installs.interrupted(it) }
       }
     }
-  }
-
-  private val mutableSettings = MutableStateFlow(AppSettings.read(application))
-  val settings: StateFlow<Settings> = mutableSettings
-
-  fun updateSettings(change: (Settings) -> Settings) {
-    val settings = mutableSettings.updateAndGet(change)
-    viewModelScope.launch(Dispatchers.IO) { AppSettings.write(getApplication(), settings) }
   }
 
   /** Looks at the installed games again, as when the app comes back to the foreground. */
