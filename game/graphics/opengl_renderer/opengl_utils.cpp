@@ -30,8 +30,10 @@ FramebufferTexturePair::FramebufferTexturePair(int w, int h, u64 texture_format,
     glBindTexture(GL_TEXTURE_2D, m_texture);
     // I don't know if we really need to do this. whatever uses this texture should figure it out.
 
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, m_texture, i);
-    GLenum draw_buffers[1] = {GLenum(GL_COLOR_ATTACHMENT0 + i)};
+    // Each level has its own framebuffer, so attachment 0 is enough. OpenGL ES requires draw
+    // buffer i to be GL_COLOR_ATTACHMENTi, so attachment 0 is also the only portable choice.
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture, i);
+    GLenum draw_buffers[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, draw_buffers);
     auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status != GL_FRAMEBUFFER_COMPLETE) {

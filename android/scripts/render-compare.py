@@ -83,6 +83,7 @@ def start_desktop(gk: pathlib.Path, game: str, frames: str, out: pathlib.Path):
 
 def start_android(game: str, frames: str, device_out: str) -> None:
     adb("shell", "am", "force-stop", PACKAGE)
+    adb("logcat", "-c", check=False)
     adb("shell", "rm", "-rf", device_out, check=False)
     adb("forward", f"tcp:{FORWARDED_PORT}", f"tcp:{DEVICE_PORT}")
     env = f"OG_SCREENSHOT_FRAMES={frames} OG_SCREENSHOT_DIR={device_out}"
@@ -140,6 +141,17 @@ def compare(desktop: pathlib.Path, android: pathlib.Path, sheet_path: pathlib.Pa
     return mean
 
 
+def gl_problems(log: pathlib.Path) -> dict[str, int]:
+    """OpenGL errors and warnings from the GL debug callback, by message, with counts."""
+    problems: dict[str, int] = {}
+    if log.exists():
+        for line in log.read_text(errors="replace").splitlines():
+            if "OpenGL error" in line or "OpenGL warn" in line:
+                message = line[line.index("OpenGL") :]
+                problems[message] = problems.get(message, 0) + 1
+    return problems
+
+
 def shaders(path: pathlib.Path) -> dict[str, int]:
     return json.loads(path.read_text()) if path.exists() else {}
 
@@ -173,6 +185,8 @@ def capture(args, place: str, frames: str, last: str) -> tuple[bool, bool | None
             )
             (out / "android").mkdir(parents=True, exist_ok=True)
             adb("pull", f"{device_out}/.", str(out / "android"), check=False)
+            log = adb("logcat", "-d", "-s", "OpenGOAL:V", check=False)
+            (out / "android" / "gk.log").write_text(log)
         return desktop_done, android_done
     finally:
         for repl in repls:
@@ -235,6 +249,9 @@ def main() -> int:
                 only_d = sorted(set(d_sh) - set(a_sh))
                 only_a = sorted(set(a_sh) - set(d_sh))
                 report.append(f"  - only desktop: {only_d}, only Android: {only_a}")
+        for build in ("desktop", "android"):
+            for message, count in gl_problems(out / build / "gk.log").items():
+                report.append(f"- {build} GL ({count}x): `{message}`")
         report.append("")
         android = (
             "" if android_done is None else f", android {'ok' if android_done else 'incomplete'}"

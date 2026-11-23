@@ -11,6 +11,7 @@
 #endif
 
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 
 #include "third-party/glad-gles/include/glad/glad.h"
@@ -58,10 +59,13 @@ inline void og_glTexSubImage1D(GLenum target,
 #define GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER 0x8CDC
 
 // OpenGL ES only restarts primitives at the largest index of the index type. The renderer always
-// restarts at UINT32_MAX with 32-bit indices, which is the same thing.
+// restarts at UINT32_MAX, and every indexed draw uses 32-bit indices, which is the same thing.
 #define GL_PRIMITIVE_RESTART GL_PRIMITIVE_RESTART_FIXED_INDEX
 inline void og_glPrimitiveRestartIndex(GLuint index) {
-  (void)index;
+  if (index != UINT32_MAX) {
+    fprintf(stderr, "glPrimitiveRestartIndex(%u): OpenGL ES can only restart at UINT32_MAX\n",
+            index);
+  }
 }
 #define glPrimitiveRestartIndex og_glPrimitiveRestartIndex
 
