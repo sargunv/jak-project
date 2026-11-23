@@ -7,11 +7,14 @@ handheld such as the AYN Thor. Jak 2 and Jak 3 come after Jak 1.
 
 - `libmain.so` builds for `arm64-v8a` and `x86_64` with NDK r30. The APK
   packages both. Pages are 16 KB aligned.
-- On `x86_64` in Innkeeper, Jak 1 renders: the title screen and every level the
-  render comparison visits look the same as the desktop build. Nothing has been
-  played yet: input, audio and the rest of milestone 2 are next.
+- On `x86_64` in Innkeeper, Jak 1 renders like the desktop build at every level
+  the render comparison visits, with no OpenGL errors. A gamepad (a virtual one,
+  through Innkeeper) and the keyboard work, sound plays through AAudio, and New
+  Game starts the intro. Nobody has played it for real yet.
+- On `arm64-v8a`, under the emulator's ARM translation and without a display,
+  upstream's arm64 game code boots, reaches the title screen and loads into
+  Sandover. Rendering on arm64 needs hardware.
 - The desktop build still builds, and `goalc-test` passes (1669 tests).
-- Nothing has run on `arm64-v8a` yet.
 
 ## Done
 
@@ -70,30 +73,47 @@ Tools:
       and compares desktop SPIR-V with upstream.
 - [x] `mise run render:compare` renders the same frames of each level on the
       desktop build and the adb device, with the shaders that drew each frame.
-- [x] Fixed upstream: gk's `--port` was parsed but the listener ignored it.
+- [x] `android/scripts/smoke-places.sh` boots the game without a display and
+      starts play at continue points over the REPL, for devices that can't
+      render.
+- [x] Fixed upstream: gk's `--port` was parsed but the listener ignored it, and
+      it was a counting flag, so leaving it out meant port 0.
+
+Platform:
+
+- [x] OpenGL ES errors at startup: mip level framebuffers attached level `i` at
+      `GL_COLOR_ATTACHMENTi` and drew to buffer 0.
+- [x] Every indexed draw uses 32-bit indices and restarts at `UINT32_MAX`, which
+      matches OpenGL ES's fixed restart index. The OpenGL ES stand-in warns if
+      that ever changes.
+- [x] The window always fills the screen: display mode, size and position
+      changes only record the setting. `OG_RENDER_SCALE` renders below the
+      screen's resolution.
+- [x] Audio through cubeb's AAudio backend (its OpenSL ES backend needs Java
+      that cubeb only reaches inside Firefox), stopped while the app is in the
+      background.
+- [x] Back pauses the game instead of closing it, which needs predictive back
+      turned off for `targetSdk` 36.
+- [x] Backgrounding and resuming: the render thread blocks in SDL, the game
+      waits for it, the surface comes back, and there's no ANR.
+- [x] The APK ships the repository's runtime files (shaders, assets) and unpacks
+      them into the data folder in internal storage. Only `out/<game>` has to be
+      installed.
+- [x] Log lines have no ANSI colors from the first one.
 
 ## Milestone 1: renders on x86_64
 
 Innkeeper and the emulator run the x86-64 object code, so the platform layer and
 the renderer can be finished before any arm64 hardware is involved.
 
-- [ ] **`glDrawBuffers` errors at startup.** OpenGL ES requires entry `i` to be
-      `GL_COLOR_ATTACHMENTi` or `GL_NONE`, and ANGLE reports
-      `GL_INVALID_OPERATION` 7 times at startup. Find the call and reorder its
-      attachments on OpenGL ES.
-- [ ] **Turn on GL debug output** (`KHR_debug` is core in OpenGL ES 3.2) and fix
-      what it reports at runtime. Likely: unsized or invalid internal formats in
-      `glTexImage2D` (OpenGL ES only accepts some format and type pairs),
-      framebuffer formats that can't be rendered to, `glBlitFramebuffer` resolve
-      rules (OpenGL ES requires matching formats and sizes), and depth formats.
-- [ ] Check primitive restart. OpenGL ES restarts at `0xFFFF` for 16-bit
-      indices, where desktop restarts at `UINT32_MAX`. Make sure every restart
-      draw uses 32-bit indices.
+- [ ] GL debug output is on, and `render:compare` reports GL errors and warnings
+      per place. ANGLE reports none at the 13 places it visits; watch for more
+      on Adreno.
 - [ ] `glGetTexImage` is a no-op on OpenGL ES. Only debug texture dumps use it;
       read through a framebuffer with `glReadPixels` instead.
-- [ ] The display manager lists monitors and fullscreen modes. On Android
-      there's one fullscreen window, so hide those settings and add a
-      render-scale setting.
+- [ ] The game's own menus still offer display modes, monitors and resolutions,
+      which do nothing on Android. Hiding them means changing `goal_src`'s PC
+      menus. A render-scale setting needs a place in the app's settings.
 - [ ] Pixel-exact render comparisons. Frame numbers don't line up the game state
       between builds, so the comparison shows the same place from slightly
       different moments. Capturing a frame's DMA chain on one build and
@@ -104,47 +124,43 @@ the renderer can be finished before any arm64 hardware is involved.
       the driver lacks `GL_NV_shader_noperspective_interpolation`. Check the sky
       on Adreno.
 - [ ] `--gpu-test` still asks for desktop OpenGL 4.3 in its context attributes.
-- [ ] Log colors before `--disable-ansi` takes effect: the first few log lines
-      still have ANSI escapes.
 
 ## Milestone 2: playable on x86_64
 
-- [ ] **Input.** SDL's Android gamepad support should hand the Thor's built-in
-      controls to the game as a gamepad. Check the mapping, and that Back and
-      Select+Start reach the pause menu (`SDL_ANDROID_TRAP_BACK_BUTTON`). Phones
-      need a touch overlay.
-- [ ] **Audio.** cubeb builds with its AAudio and OpenSL ES backends, but logs
-      `Cubeb init failed` in Innkeeper (the desktop's offscreen runs log it too,
-      with no audio device). Check playback on the emulator and a device,
-      latency, and that sound pauses in the background.
-- [ ] **Lifecycle.** When the app goes to the background, the EE and IOP threads
-      have to pause with SDL, the EGL surface comes back on resume, and settings
-      and saves have to be written first. Check that a long pause doesn't cause
-      an ANR.
-- [ ] **Game data install.** `adb push` is a development stand-in. Pick between:
+- [ ] **Input on hardware.** A virtual Xbox controller works through Innkeeper,
+      hotplug included. Check the Thor's built-in controls and their mapping.
+      Phones need a touch overlay.
+- [ ] **Audio latency** on a device. AAudio opens in low-latency mode with
+      240-frame bursts in Innkeeper.
+- [ ] **Game data install.** `push-data.sh` is a development stand-in. Pick
+      between:
   - Make the data on a desktop and copy it over. Simple, but awkward for
     players.
   - Run the extractor and compiler on the device, like Precursor does. It needs
     `goalc` and the extractor built for Android, and a lot of memory: Precursor
     reports Jak 3 peaking at 7.3 GB.
 
-  Either way, the app should unpack the files it ships (shaders, `game/assets`,
-  `custom_assets`, `goal_src`) from its APK assets, and pick ISOs and data with
-  the Storage Access Framework.
+  Either way, pick ISOs and data with the Storage Access Framework, and write
+  the data as the app, so it owns the files.
 
 - [ ] Settings, memory cards and screenshots in app storage, with backup and
       restore.
 - [ ] **Performance.** Frame pacing (`ANativeWindow_setFrameRate`, or Swappy),
       120 Hz panels, and thread placement on big.LITTLE cores.
 - [ ] Aspect ratios: the Thor's 16:9 top screen and 20:9 phones.
-- [ ] REPL over `adb forward tcp:8112 tcp:8112` for development. It should work
-      already: check it.
+- [x] REPL over `adb forward` works in Innkeeper.
 
 ## Milestone 3: arm64
 
-- [ ] Compile the game data with `extractor --instruction-set arm64` (or
-      `mise run desktop:extract jak1 <iso> --instruction-set arm64`), and push
-      that to arm64 devices. `push-data.sh` assumes x86-64 data today.
+- [x] arm64 game data: `goalc --instruction-set arm64` in a separate checkout
+      (README), pushed with `push-data.sh`. The arm64 objects are 11 to 17%
+      larger than x86-64's.
+- [ ] **The listener never accepts on the translation emulator.** The arm64
+      build listens on 8112, but connections time out, even from inside the
+      device: the first completes into the backlog of 0 and nothing accepts it.
+      `select_and_accept_socket` probably never sees the socket as readable
+      under translation. Check on hardware: if it happens there too, it's an
+      arm64 bug.
 - [ ] **Check the upstream ARM64 backend against the standard ARM64 ABI.**
       Upstream tested it on macOS, and Apple's ABI differs from Linux and
       Android:
@@ -167,15 +183,12 @@ the renderer can be finished before any arm64 hardware is involved.
       `DEBUG_LEVEL_HEAP_MULT` to 1.15 for the kid escort mission. Precursor
       found x86-sized backup stacks too small on its own backend. Upstream's
       backend may not have that problem: check.
-- [ ] Ways to test arm64 without a handheld:
-  - `qemu-aarch64` user mode: run a Linux arm64 build of `goalc-test`, which
-    starts the runtime without a display, to test the backend on the standard
-    ARM64 ABI. Fast, and covers the riskiest part.
-  - The arm64 Android 36 system image in the emulator. Full-system emulation on
-    an x86 host is slow, but enough to check that the game boots and links its
-    code.
-  - An x86_64 Google APIs image with ARM translation for apps. Unknown whether
-    the translator handles code that the game writes and runs at runtime.
+- [x] Testing arm64 without a handheld: the x86_64 Google APIs emulator image
+      translates arm64 apps, including the game code that the runtime links at
+      run time. It runs without a display (its GPU stops at OpenGL ES 3.0).
+      `qemu-aarch64` user mode with a Linux arm64 `goalc-test` would test the
+      backend on the standard ABI without a translator in between, but needs a
+      Linux arm64 sysroot.
 - [ ] On the Thor itself: performance on the Snapdragon 8 Gen 2 and Adreno 740,
       and Adreno driver bugs (Precursor needed a workaround for bone uniforms on
       Adreno 6xx).

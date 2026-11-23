@@ -62,13 +62,41 @@ which is the fastest way to check that native changes compile.
   game frames (`android:run --env` passes it on Android).
 
 `android:run` takes the game's arguments with `--args`, such as
-`--args "-boot -fakeiso -debug"`. Without `-boot`, the game waits for the REPL.
-The REPL should reach it through `adb forward tcp:8112 tcp:8112` (8113 for Jak
-II), but nobody has tried that yet.
+`--args "-boot -fakeiso -debug"`, runtime options with `--runtime-args`, such as
+`--no-display`, and environment variables with `--env`. Without `-boot`, the
+game waits for the REPL. The REPL reaches a device through
+`adb forward tcp:8132 tcp:8112` and `(lt "127.0.0.1" 8132)`. For an arm64
+device, start goalc with `--instruction-set arm64`.
 
-The app reads the game data from its external storage,
-`/sdcard/Android/data/dev.sargunv.opengoal/files/data`, so `adb push` can update
-it. Logs also go to `data/log/` there.
+### Storage
+
+The runtime's data folder is in the app's internal storage (`files/data`). The
+app unpacks the files it ships there, such as shaders, when it's installed or
+updated. The game data goes in `files/data/out/<game>`: `android:push-data`
+copies it in through `/data/local/tmp` and `run-as`, because the app can't read
+folders that adb creates in its external storage. Innkeeper has no `run-as`, so
+there the data goes to external storage, and `out` links to it.
+
+### arm64 without hardware
+
+The x86_64 Google APIs emulator images translate arm64 apps to x86-64
+(`libndk_translation`). That runs the arm64 build, including the game code that
+the runtime links at run time, but its GPU only offers OpenGL ES 3.0, so run it
+without a display:
+
+```sh
+avdmanager create avd -n opengoal-arm-translation -d medium_tablet \
+  -k "system-images;android-36;google_apis;x86_64"
+emulator -avd opengoal-arm-translation -port 5560 -no-window -no-audio -gpu host
+adb -s emulator-5560 install --abi arm64-v8a -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Compile the game for arm64 in a separate checkout (a git worktree), since the
+compiler writes to `out/` either way:
+`goalc -g jak1 --instruction-set arm64 --proj-path <worktree> -c '(mi)'`, with
+the worktree's `iso_data/jak1` and `decompiler_out` linked to the main
+checkout's and `out/jak1/fr3` copied. Then run `push-data.sh` from the worktree,
+and `android:run --runtime-args --no-display`.
 
 ### Innkeeper
 
