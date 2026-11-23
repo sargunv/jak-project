@@ -154,6 +154,14 @@ On the AYN Thor (Android 13, Snapdragon 8 Gen 2, Adreno 740, 16 GB):
       window started with the status bar showing, it kept drawing the bar's
       background over the game. `GameActivity` hides the bars before SDL's
       window exists.
+- [x] Glows (Jak II's lamps and console lights) showed through walls: their
+      occlusion probes sampled the depth buffer with `GL_LINEAR`, which OpenGL
+      ES can't do for depth textures, so the texture read as 0 and every probe
+      passed. It samples with `GL_NEAREST` on OpenGL ES.
+- [ ] Jak II logs OpenGL errors on Adreno: the ocean draws primitives of fewer
+      than 3 vertices (thousands a frame), and the sky's texture animation
+      (`tex-lcom-sky-pre`) can't generate mipmaps for a texture whose format it
+      uploaded differently. Check what they look like.
 - [x] The Adreno 740 has `GL_NV_shader_noperspective_interpolation`, so the sky
       interpolates as on desktop. Skinned characters (merc) render correctly, so
       the Adreno 6xx bone uniform bug that Precursor worked around doesn't
@@ -165,9 +173,10 @@ Innkeeper and the emulator run the x86-64 object code, so the platform layer and
 the renderer can be finished before any arm64 hardware is involved.
 
 - [x] GL debug output is on, and `render:compare` reports GL errors and warnings
-      per place. ANGLE reports none at the 13 places it visits. Adreno's own
-      driver notes ("Packing allocations for resource", type 0x7FFFFFFF) log as
-      debug messages instead of errors.
+      per place. ANGLE reports none at the 13 places it visits. Adreno reports
+      its performance notes ("Packing allocations for resource") at high
+      severity, and they log as debug messages instead of errors. Adreno gives
+      every message the id 0x7FFFFFFF, errors included.
 - [x] The game hides the status and navigation bars: the window is created
       fullscreen, and the display manager reads the window's size every frame,
       since hiding the bars resizes the window without an event reaching it. The
@@ -192,10 +201,11 @@ the renderer can be finished before any arm64 hardware is involved.
 ## Milestone 2: playable on x86_64
 
 - [ ] **Input on hardware.** A virtual Xbox controller works through Innkeeper,
-      hotplug included. The Thor's built-in controls play Jak 1. Its Nintendo
-      layout mode swaps A with B and X with Y, which the launcher's "Swap face
-      buttons" setting undoes (`OG_SWAP_FACE_BUTTONS`, applied before the game's
-      position-based binds). Phones need a touch overlay.
+      hotplug included. The Thor's built-in controls play Jak 1 and Jak II. In
+      its Nintendo layout mode, rebind the face buttons in the game's own
+      controller menu. Button events reach the game a frame or two after the
+      kernel, and releases as short as 20 ms register. Phones need a touch
+      overlay.
 - [ ] **Audio latency** on a device. AAudio opens in low-latency mode with
       240-frame bursts in Innkeeper. On the Thor it's a fast mixer track on the
       media stream, not MMAP, and the system volume applies its usual curve.
