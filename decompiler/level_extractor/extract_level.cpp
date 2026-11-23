@@ -1,5 +1,6 @@
 #include "extract_level.h"
 
+#include <algorithm>
 #include <set>
 #include <thread>
 
@@ -418,6 +419,9 @@ void extract_all_levels(const ObjectFileDB& db,
   file_util::create_dir_if_needed(entities_dir);
 
   int num_workers = dgo_names.size();
+  if (config.level_extract_threads > 0) {
+    num_workers = std::min(num_workers, config.level_extract_threads);
+  }
   if (tex_db.replace_texture_dir) {
     num_workers = 1;
   }

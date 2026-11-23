@@ -175,6 +175,9 @@ struct Config {
 
   std::vector<std::string> levels_to_extract;
   bool levels_extract;
+  // How many levels to extract at once. Each holds its own data, so fewer use less memory. 0 for
+  // one at a time per level.
+  int level_extract_threads = 0;
   bool save_texture_pngs = false;
   bool rip_streamed_audio = false;
   bool rip_music = false;
