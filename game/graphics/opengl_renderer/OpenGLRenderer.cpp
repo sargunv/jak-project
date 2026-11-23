@@ -55,10 +55,9 @@ void GLAPIENTRY opengl_error_callback(GLenum source,
                                       const GLchar* message,
                                       const void* /*userParam*/) {
 #ifdef OG_GLES
-  // Adreno's driver reports its own notes, such as "Packing allocations for resource", as
-  // high-severity messages of type 0x7FFFFFFF, which isn't a debug message type.
-  constexpr GLenum kAdrenoDriverNote = 0x7FFFFFFF;
-  if (type == kAdrenoDriverNote) {
+  // Adreno's driver reports its performance notes, such as "Packing allocations for resource", as
+  // high severity, often several each frame. Errors still come through as errors.
+  if (type == GL_DEBUG_TYPE_PERFORMANCE) {
     severity = GL_DEBUG_SEVERITY_NOTIFICATION;
   }
 #endif
