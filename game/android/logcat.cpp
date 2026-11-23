@@ -8,6 +8,8 @@
 #include <thread>
 #include <unistd.h>
 
+#include "common/log/log.h"
+
 #include <android/log.h>
 
 namespace {
@@ -44,6 +46,10 @@ void forward_to_logcat(int read_fd) {
 }
 
 __attribute__((constructor)) void redirect_stdio_to_logcat() {
+  // logcat shows ANSI escapes as text. The logger is constant-initialized, so this can run before
+  // other static initializers.
+  lg::disable_ansi_colors();
+
   int fds[2];
   if (pipe(fds) != 0) {
     return;
