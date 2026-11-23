@@ -18,6 +18,9 @@ endif() # DRACO_CMAKE_DRACO_OPTIONS_CMAKE_
 set(DRACO_CMAKE_DRACO_OPTIONS_CMAKE_)
 
 set(draco_features_file_name "${draco_src_root}/draco_features.h")
+# Stage the header in the build directory, so that configures of several build directories at once
+# (such as Gradle configuring each Android ABI) don't delete each other's staged file.
+set(draco_features_tmp_file_name "${CMAKE_BINARY_DIR}/draco_features.h.new")
 set(draco_features_list)
 
 # Simple wrapper for CMake's builtin option command that tracks draco's build
@@ -284,46 +287,46 @@ endmacro()
 
 # Function for generating draco_features.h.
 function(draco_generate_features_h)
-  file(WRITE "${draco_features_file_name}.new"
+  file(WRITE "${draco_features_tmp_file_name}"
        "// GENERATED FILE -- DO NOT EDIT\n\n" "#ifndef DRACO_FEATURES_H_\n"
        "#define DRACO_FEATURES_H_\n\n")
 
   foreach(feature ${draco_features_list})
-    file(APPEND "${draco_features_file_name}.new" "#define ${feature}\n")
+    file(APPEND "${draco_features_tmp_file_name}" "#define ${feature}\n")
   endforeach()
 
   if(WIN32)
     if(NOT DRACO_DEBUG_COMPILER_WARNINGS)
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "// Enable DRACO_DEBUG_COMPILER_WARNINGS at CMake generation \n"
            "// time to remove these pragmas.\n")
 
       # warning C4018: '<operator>': signed/unsigned mismatch.
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4018)\n")
 
       # warning C4146: unary minus operator applied to unsigned type, result
       # still unsigned
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4146)\n")
 
       # warning C4244: 'return': conversion from '<type>' to '<type>', possible
       # loss of data.
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4244)\n")
 
       # warning C4267: 'initializing' conversion from '<type>' to '<type>',
       # possible loss of data.
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4267)\n")
 
       # warning C4305: 'context' : truncation from 'type1' to 'type2'.
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4305)\n")
 
       # warning C4661: 'identifier' : no suitable definition provided for
       # explicit template instantiation request.
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4661)\n")
 
       # warning C4800: Implicit conversion from 'type' to bool. Possible
@@ -331,23 +334,23 @@ function(draco_generate_features_h)
       # Also, in older MSVC releases:
       # warning C4800: 'type' : forcing value to bool 'true' or 'false'
       # (performance warning).
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4800)\n")
 
       # warning C4804: '<operator>': unsafe use of type '<type>' in operation.
-      file(APPEND "${draco_features_file_name}.new"
+      file(APPEND "${draco_features_tmp_file_name}"
            "#pragma warning(disable:4804)\n")
     endif()
   endif()
 
-  file(APPEND "${draco_features_file_name}.new"
+  file(APPEND "${draco_features_tmp_file_name}"
        "\n#endif  // DRACO_FEATURES_H_\n")
 
   # Will replace ${draco_features_file_name} only if the file content has
   # changed. This prevents forced Draco rebuilds after CMake runs.
-  configure_file("${draco_features_file_name}.new"
+  configure_file("${draco_features_tmp_file_name}"
                  "${draco_features_file_name}")
-  file(REMOVE "${draco_features_file_name}.new")
+  file(REMOVE "${draco_features_tmp_file_name}")
 endfunction()
 
 # Sets default options for the build and processes user controlled options to

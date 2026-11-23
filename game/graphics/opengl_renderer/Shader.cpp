@@ -22,6 +22,22 @@ Shader::Shader(const std::string& shader_name, GameVersion version) : m_name(sha
   frag_src = std::regex_replace(frag_src, std::regex("SCISSOR_HEIGHT"), scissor_height);
   vert_src = std::regex_replace(vert_src, std::regex("SCISSOR_ADJUST"), "(" + scissor_adjust + ")");
 
+#ifdef OG_GLES
+  // The shaders are written for desktop GLSL 4.10. OpenGL ES needs its own version line and
+  // default precisions.
+  const std::regex version_line("#version 410 core");
+  const std::string gles_header =
+      "#version 320 es\n"
+      "precision highp float;\n"
+      "precision highp int;\n"
+      "precision highp sampler2D;\n"
+      "precision highp usampler2D;\n"
+      "precision highp isampler2D;\n"
+      "precision highp sampler2DArray;\n";
+  vert_src = std::regex_replace(vert_src, version_line, gles_header);
+  frag_src = std::regex_replace(frag_src, version_line, gles_header);
+#endif
+
   m_vert_shader = glCreateShader(GL_VERTEX_SHADER);
   const char* src = vert_src.c_str();
   glShaderSource(m_vert_shader, 1, &src, nullptr);

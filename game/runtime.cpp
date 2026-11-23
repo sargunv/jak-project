@@ -161,8 +161,11 @@ void ee_runner(SystemThreadInterface& iface) {
 #ifdef __APPLE__
                   // has no map_populate
                   MAP_ANONYMOUS | MAP_32BIT | MAP_PRIVATE, 0, 0);
-#else
+#elif defined(MAP_32BIT)
                   MAP_ANONYMOUS | MAP_32BIT | MAP_PRIVATE | MAP_POPULATE, 0, 0);
+#else
+                  // MAP_32BIT only exists on x86. The address hint still asks for low memory.
+                  MAP_ANONYMOUS | MAP_PRIVATE | MAP_POPULATE, 0, 0);
 #endif
   } else {
 #if defined(__APPLE__) && defined(__aarch64__)

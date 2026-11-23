@@ -109,6 +109,9 @@ if(WIN32)
     target_link_libraries(common wsock32 ws2_32 windowsapp)
 elseif(APPLE)
     # don't need anything special
+elseif(ANDROID)
+    # dialogs use SDL's message boxes
+    target_link_libraries(common SDL3::SDL3)
 else()
     target_link_libraries(common stdc++fs)
 endif()

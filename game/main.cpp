@@ -179,6 +179,15 @@ int main(int argc, char** argv) {
 
   // Figure out if the CPU has AVX2 to enable higher performance AVX2 versions of functions.
   setup_cpu_info();
+#if defined(__aarch64__)
+  // ARM64 GOAL code needs NEON instead of AVX.
+  if (!get_cpu_info().has_neon) {
+    lg::info("Your CPU does not support NEON, which is required for OpenGOAL.");
+    dialogs::create_error_message_dialog(
+        "Unmet Requirements", "Your CPU does not support NEON, which is required for OpenGOAL.");
+    return -1;
+  }
+#else
   // If the CPU doesn't have AVX, GOAL code won't work and we exit.
   if (!get_cpu_info().has_avx) {
 // Check if we are on a modern enough version of macOS so that AVX can be
@@ -202,6 +211,7 @@ int main(int argc, char** argv) {
     return -1;
 #endif
   }
+#endif
 
   // set up file paths for resources. This is the full repository when developing, and the data
   // directory (a subset of the full repo) in release versions

@@ -36,6 +36,12 @@ void handleDiscordJoinRequest(const DiscordUser* /*request*/) {}
 void handleDiscordSpectate(const char* /*secret*/) {}
 
 void init_discord_rpc() {
+#ifdef __ANDROID__
+  // There's no Discord client to talk to, and registering the app runs xdg-mime through system(),
+  // which forks the multithreaded app process and deadlocks the child.
+  gDiscordRpcEnabled = 0;
+  return;
+#endif
   if (g_game_version != GameVersion::Jak1 && g_game_version != GameVersion::Jak2 &&
       g_game_version != GameVersion::Jak3) {
     lg::error("Game version unsupported for Discord RPC - {}", fmt::underlying(g_game_version));

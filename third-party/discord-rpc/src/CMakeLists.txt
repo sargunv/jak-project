@@ -71,7 +71,10 @@ if(UNIX)
     endif(APPLE)
 
     add_library(discord-rpc ${BASE_RPC_SRC})
-    target_link_libraries(discord-rpc PUBLIC pthread)
+    # bionic provides pthreads in libc
+    if(NOT ANDROID)
+        target_link_libraries(discord-rpc PUBLIC pthread)
+    endif()
 
     if (APPLE)
         target_link_libraries(discord-rpc PRIVATE "-framework AppKit, -mmacosx-version-min=10.10")

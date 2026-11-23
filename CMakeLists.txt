@@ -56,7 +56,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -fcxx-exceptions \
         -fexceptions \
         -fdiagnostics-color=always \
-        -mavx \
         -Wall \
         -Wno-c++11-narrowing \
         -Wno-c++98-compat \
@@ -110,8 +109,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wredundant-decls \
         -Wshadow \
         -Wsign-promo \
-        -fdiagnostics-color=always \
-        -mavx")
+        -fdiagnostics-color=always")
 
     # additional c++ flags for release mode for our projects
     if(CMAKE_BUILD_TYPE MATCHES "Release")
@@ -173,6 +171,19 @@ else()
     message(FATAL_ERROR "Unknown Compiler '${CMAKE_CXX_COMPILER_ID}', get out!")
 endif()
 
+# AVX is x86-only, so ARM targets such as Android arm64-v8a build without it
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" OG_SYSTEM_PROCESSOR_LOWER)
+if(CMAKE_CXX_COMPILER_ID MATCHES "^(Clang|GNU)$")
+    if(OG_SYSTEM_PROCESSOR_LOWER MATCHES "^(x86_64|amd64)$")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
+    elseif(OG_SYSTEM_PROCESSOR_LOWER MATCHES "^(aarch64|arm64)$")
+        # crc32.h uses the CRC32 instructions. char is signed on x86 and Apple arm64 but unsigned
+        # in the standard ARM64 ABI that Linux and Android use, and the runtime assumes signed.
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+crc -fsigned-char")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsigned-char")
+    endif()
+endif()
+
 # Platform Specific Settings
 if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -180,6 +191,14 @@ if(WIN32)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 endif()
+
+# Android ships only the game runtime; the compiler, decompiler and other tools run on a desktop
+if(ANDROID)
+    set(OG_BUILD_TOOLS_DEFAULT OFF)
+else()
+    set(OG_BUILD_TOOLS_DEFAULT ON)
+endif()
+option(OG_BUILD_TOOLS "Build the compiler, decompiler, LSP, tools and tests" ${OG_BUILD_TOOLS_DEFAULT})
 
 # Code Coverage
 option(CODE_COVERAGE "Enable Code Coverage Compiler Flags" OFF)
@@ -247,11 +266,20 @@ else()
     endif()
     set(CURL_USE_OPENSSL ON)
 endif()
-include_directories(third-party/curl/include)
-if(STATICALLY_LINK)
-    build_third_party_lib(curl libcurl_static)
+# Android has no system OpenSSL for libcurl. Web requests only fetch speedrun leaderboards.
+if(ANDROID)
+    set(OG_WEB_REQUESTS_DEFAULT OFF)
 else()
-    build_third_party_lib(curl libcurl_shared)
+    set(OG_WEB_REQUESTS_DEFAULT ON)
+endif()
+option(OG_WEB_REQUESTS "Build libcurl for the runtime's web requests" ${OG_WEB_REQUESTS_DEFAULT})
+if(OG_WEB_REQUESTS)
+    include_directories(third-party/curl/include)
+    if(STATICALLY_LINK)
+        build_third_party_lib(curl libcurl_static)
+    else()
+        build_third_party_lib(curl libcurl_shared)
+    endif()
 endif()
 
 # build repl library
@@ -282,7 +310,9 @@ add_subdirectory(common)
 build_third_party_lib(cubeb cubeb)
 
 # build LSP
-add_subdirectory(lsp)
+if(OG_BUILD_TOOLS)
+    add_subdirectory(lsp)
+endif()
 
 # build libco and zstd
 build_third_party_lib(libco libco)
@@ -304,25 +334,27 @@ build_third_party_lib(imgui imgui)
 # build the game code in C++
 add_subdirectory(game)
 
-# build the compiler
-add_subdirectory(goalc)
+if(OG_BUILD_TOOLS)
+    # build the compiler
+    add_subdirectory(goalc)
 
-# build standalone tools
-add_subdirectory(tools)
+    # build standalone tools
+    add_subdirectory(tools)
 
-# build decompiler
-add_subdirectory(decompiler)
+    # build decompiler
+    add_subdirectory(decompiler)
 
-# build the gtest libraries
-if(WIN32)
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    # build the gtest libraries
+    if(WIN32)
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    endif()
+
+    build_third_party_lib(googletest gtest)
+    include(GoogleTest)
+
+    # build tests
+    include(test/CMakeLists.txt)
 endif()
-
-build_third_party_lib(googletest gtest)
-include(GoogleTest)
-
-# build tests
-include(test/CMakeLists.txt)
 
 # build lzokay library
 build_third_party_lib(lzokay lzokay)

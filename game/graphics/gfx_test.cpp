@@ -1,8 +1,7 @@
 #include "gfx_test.h"
 
+#include "game/graphics/gl.h"
 #include "game/system/hid/sdl_util.h"
-
-#include "third-party/glad/include/glad/glad.h"
 
 namespace tests {
 void to_json(json& j, const GPUTestOutput& obj) {
@@ -41,8 +40,12 @@ GPUTestOutput run_gpu_test(const std::string& test_type) {
       output = {false, "Required OpenGL Version is not supported",
                 sdl_util::log_and_return_error("SDL initialization failed")};
     } else {
+#ifdef OG_GLES
+      if (!gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress)) {
+#else
       gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
       if (!gladLoadGL()) {
+#endif
         output = {false, "Unable to init GLAD", ""};
       } else {
         output = {true, "", ""};

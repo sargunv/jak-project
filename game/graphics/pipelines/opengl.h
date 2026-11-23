@@ -10,9 +10,9 @@
 
 #include "game/graphics/display.h"
 #include "game/graphics/gfx.h"
+#include "game/graphics/gl.h"
 
 #include "third-party/SDL/include/SDL3/SDL.h"
-#include "third-party/glad/include/glad/glad.h"
 
 class GLDisplay : public GfxDisplay {
  public:

@@ -126,17 +126,26 @@ static int gl_init(GfxGlobalSettings& settings) {
     auto p = scoped_prof("startup::sdl::set_gl_attributes");
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+#ifdef OG_GLES
+    // Android has no desktop OpenGL. OpenGL ES 3.2 covers what the renderer uses.
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
     if (settings.debug) {
       SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
     } else {
       SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     }
+#if defined(OG_GLES)
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+#elif defined(__APPLE__)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-#ifndef __APPLE__
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#else
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 #endif
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
@@ -236,8 +245,12 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
   if (!gl_inited) {
     {
       auto p = scoped_prof("startup::sdl::glad_init");
+#ifdef OG_GLES
+      if (!gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress)) {
+#else
       gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
       if (!gladLoadGL()) {
+#endif
         lg::error("GL init fail");
         dialogs::create_error_message_dialog("Critical Error Encountered",
                                              "Unable to initialize OpenGL API.\nOpenGOAL requires "
@@ -300,11 +313,13 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
   {
     auto p = scoped_prof("startup::sdl::init_imgui");
     // setup imgui
-#ifdef __APPLE__
-    init_imgui(window, gl_context, "#version 410");
-#else
-    init_imgui(window, gl_context, "#version 430");
+    const char* glsl_version = "#version 430";
+#if defined(OG_GLES)
+    glsl_version = "#version 300 es";
+#elif defined(__APPLE__)
+    glsl_version = "#version 410";
 #endif
+    init_imgui(window, gl_context, glsl_version);
   }
 
   return std::static_pointer_cast<GfxDisplay>(display);

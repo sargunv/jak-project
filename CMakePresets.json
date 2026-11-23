@@ -262,6 +262,38 @@
       "displayName": "Linux Release (gcc)",
       "description": "Build with GCC as Release without Debug Symbols",
       "inherits": ["base-linux-release", "base-gcc"]
+    },
+    {
+      "name": "base-android",
+      "hidden": true,
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+        "ANDROID_PLATFORM": "android-28",
+        "ANDROID_STL": "c++_static",
+        "STATICALLY_LINK": "true",
+        "ZYDIS_BUILD_SHARED_LIB": "OFF"
+      }
+    },
+    {
+      "name": "Release-android-arm64",
+      "displayName": "Android arm64-v8a Release",
+      "description": "Build the game runtime for Android on arm64-v8a",
+      "inherits": "base-android",
+      "cacheVariables": {
+        "ANDROID_ABI": "arm64-v8a"
+      }
+    },
+    {
+      "name": "Release-android-x86_64",
+      "displayName": "Android x86_64 Release",
+      "description": "Build the game runtime for Android on x86_64, for emulators",
+      "inherits": "base-android",
+      "cacheVariables": {
+        "ANDROID_ABI": "x86_64"
+      }
     }
   ]
 }
