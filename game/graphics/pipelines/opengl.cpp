@@ -5,10 +5,13 @@
 
 #include "opengl.h"
 
+#include <algorithm>
 #include <condition_variable>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <vector>
 
 #include "common/dma/dma_copy.h"
 #include "common/global_profiler/GlobalProfiler.h"
@@ -22,6 +25,7 @@
 #include "game/graphics/display.h"
 #include "game/graphics/gfx.h"
 #include "game/graphics/opengl_renderer/OpenGLRenderer.h"
+#include "game/graphics/opengl_renderer/Shader.h"
 #include "game/graphics/opengl_renderer/debug_gui.h"
 #include "game/graphics/screenshot.h"
 #include "game/graphics/texture/TexturePool.h"
@@ -366,10 +370,10 @@ void GLDisplay::init_splash() {
     return;
 
   auto shader_folder = "game/graphics/opengl_renderer/shaders";
-  auto vert_src =
-      file_util::read_text_file(file_util::get_file_path({shader_folder, "splash.vert"}));
-  auto frag_src =
-      file_util::read_text_file(file_util::get_file_path({shader_folder, "splash.frag"}));
+  auto vert_src = shader_source_for_context(
+      file_util::read_text_file(file_util::get_file_path({shader_folder, "splash.vert"})));
+  auto frag_src = shader_source_for_context(
+      file_util::read_text_file(file_util::get_file_path({shader_folder, "splash.frag"})));
 
   constexpr int len = 1024;
   GLint compile_ok;
@@ -480,6 +484,39 @@ GLDisplay::~GLDisplay() {
   }
 }
 
+namespace {
+/*!
+ * Game frames to screenshot, from the comma-separated OG_SCREENSHOT_FRAMES environment variable.
+ * For comparing rendering between builds, such as desktop OpenGL and OpenGL ES: each build saves
+ * frame-NNNNN.png at the same internal resolution, with frame-NNNNN.shaders.json listing the
+ * shaders that drew it, in OG_SCREENSHOT_DIR or else the screenshots folder.
+ * android/scripts/render-compare.py drives this.
+ */
+std::vector<u64> screenshot_frames_from_env() {
+  std::vector<u64> frames;
+  const char* env = std::getenv("OG_SCREENSHOT_FRAMES");
+  if (!env) {
+    return frames;
+  }
+  std::stringstream ss(env);
+  std::string item;
+  while (std::getline(ss, item, ',')) {
+    if (!item.empty()) {
+      frames.push_back(std::stoull(item));
+    }
+  }
+  std::sort(frames.begin(), frames.end(), std::greater<>());
+  return frames;
+}
+
+// The next frame to screenshot is at the back. Read on first use: on Android, the app sets the
+// environment after loading the library.
+std::vector<u64>& screenshot_frames() {
+  static std::vector<u64> frames = screenshot_frames_from_env();
+  return frames;
+}
+}  // namespace
+
 void render_game_frame(int game_width,
                        int game_height,
                        int window_fb_width,
@@ -526,6 +563,30 @@ void render_game_frame(int game_width,
       options.save_screenshot = true;
       options.quick_screenshot = true;
       options.screenshot_path = file_util::make_screenshot_filepath(g_game_version);
+    }
+    auto& shot_frames = screenshot_frames();
+    if (!shot_frames.empty() && g_gfx_data->frame_idx_of_input_data >= shot_frames.back()) {
+      // A fixed internal resolution, so every build's screenshot has the same size
+      options.save_screenshot = true;
+      options.internal_res_screenshot = true;
+      options.game_res_w = 1280;
+      options.game_res_h = 720;
+      options.window_framebuffer_width = options.game_res_w;
+      options.window_framebuffer_height = options.game_res_h;
+      options.draw_region_width = options.game_res_w;
+      options.draw_region_height = options.game_res_h;
+      options.msaa_samples = 4;
+      const auto name = fmt::format("frame-{:05}", shot_frames.back());
+      // OG_SCREENSHOT_DIR puts them somewhere a test harness can reach, such as Android's
+      // external app storage
+      const char* dir = std::getenv("OG_SCREENSHOT_DIR");
+      if (dir) {
+        file_util::create_dir_if_needed(dir);
+        options.screenshot_path = (fs::path(dir) / (name + ".png")).string();
+      } else {
+        options.screenshot_path = file_util::make_screenshot_filepath(g_game_version, name);
+      }
+      shot_frames.pop_back();
     }
     // note : it's important we call get_screenshot_flag first because it modifies state
     if (g_gfx_data->debug_gui.get_screenshot_flag() || g_want_screenshot) {

@@ -9,7 +9,8 @@ import org.libsdl.app.SDLActivity
  *
  * For development, launch with intent extras to pick the game and its arguments:
  * ```
- * adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game jak1 --es args "-boot -fakeiso"
+ * adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game jak1 --es args "-boot -fakeiso" \
+ *   --es env "OG_SCREENSHOT_FRAMES=600,1200"
  * ```
  */
 class GameActivity : SDLActivity() {
@@ -20,6 +21,12 @@ class GameActivity : SDLActivity() {
   override fun getArguments(): Array<String> {
     // The runtime falls back to $HOME for anything not covered by --config-path.
     Os.setenv("HOME", filesDir.path, true)
+
+    // Development: environment variables for the runtime, such as OG_SCREENSHOT_FRAMES=600,1200
+    intent.getStringExtra("env")?.split(' ')?.forEach { assignment ->
+      val (name, value) = assignment.split('=', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+      if (name.isNotEmpty()) Os.setenv(name, value, true)
+    }
 
     // Game data that the desktop tools extracted and compiled. External app storage lets
     // `adb push` reach it during development.
