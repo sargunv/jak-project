@@ -1,14 +1,18 @@
 import javax.inject.Inject
 
-plugins { alias(libs.plugins.android.application) }
+plugins {
+  alias(libs.plugins.android.application)
+  alias(libs.plugins.kotlin.compose)
+}
 
 // The repository root holds the CMake project that builds the game runtime (libmain.so).
 val repoRoot = rootDir.parentFile
 
 /**
- * Stages the files from this repository that the runtime reads at run time, in the layout of its
- * data folder. The app ships them as assets under `game-files/` and unpacks them (GameFiles.kt), so
- * only the game's extracted data has to be installed separately.
+ * Stages the files from this repository that the app needs on the device, in the layout of the
+ * repository, which is the layout of the runtime's data folder. The app ships them as assets under
+ * `game-files/` and unpacks them (GameFiles.kt): the runtime's own files into its data folder, and
+ * the extractor's into a work folder while it installs a game from its ISO.
  */
 abstract class StageGameFiles : DefaultTask() {
   @get:InputFiles
@@ -26,21 +30,48 @@ abstract class StageGameFiles : DefaultTask() {
     val root = repoRoot.get()
     fileSystem.sync {
       into(outputDir.dir("game-files"))
-      for (path in GAME_FILE_DIRS) {
-        from(root.dir(path)) { into(path) }
+      // goal_src/jak2 holds goal_src/jak2/tools
+      duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+      for (path in RUNTIME_FILES + BUILD_FILES.values.flatten()) {
+        val source = root.file(path).asFile
+        if (source.isDirectory) {
+          from(source) { into(path) }
+        } else {
+          from(source) { into(source.parentFile.relativeTo(root.asFile).path) }
+        }
       }
     }
-    // The folders the app replaces when it unpacks a new version
-    outputDir.file("game-files.txt").get().asFile.writeText(GAME_FILE_DIRS.joinToString("\n"))
+    // The paths the app unpacks: the runtime's on every app update, the extractor's per game
+    outputDir.file("game-files.txt").get().asFile.writeText(RUNTIME_FILES.joinToString("\n"))
+    outputDir
+      .file("build-files.txt")
+      .get()
+      .asFile
+      .writeText(
+        BUILD_FILES.flatMap { (game, paths) -> paths.map { "$game $it" } }.joinToString("\n"),
+      )
   }
 
   companion object {
-    val GAME_FILE_DIRS =
+    /** What the runtime reads, besides the game's data in out/. */
+    val RUNTIME_FILES =
       listOf(
         "game/assets",
         "game/graphics/opengl_renderer/shaders",
         "custom_assets",
         "goal_src/jak2/tools",
+      )
+
+    /**
+     * What the extractor reads, besides the ISO and the runtime's files, by game (`*` for all). It
+     * decompiles with the decompiler's config and compiles the game's GOAL code.
+     */
+    val BUILD_FILES =
+      mapOf(
+        "*" to listOf("goal_src/common", "goal_src/goal-lib.gc", "goal_src/goos-lib.gs"),
+        "jak1" to listOf("goal_src/jak1", "decompiler/config/jak1"),
+        "jak2" to listOf("goal_src/jak2", "decompiler/config/jak2"),
+        "jak3" to listOf("goal_src/jak3", "decompiler/config/jak3"),
       )
   }
 }
@@ -48,7 +79,11 @@ abstract class StageGameFiles : DefaultTask() {
 val stageGameFiles =
   tasks.register<StageGameFiles>("stageGameFiles") {
     repoRoot.set(layout.projectDirectory.dir("../.."))
-    sources.from(StageGameFiles.GAME_FILE_DIRS.map { repoRoot.dir(it) })
+    sources.from(
+      (StageGameFiles.RUNTIME_FILES + StageGameFiles.BUILD_FILES.values.flatten()).map {
+        repoRoot.file(it)
+      },
+    )
   }
 
 androidComponents {
@@ -59,7 +94,8 @@ androidComponents {
 
 android {
   namespace = "dev.sargunv.opengoal"
-  compileSdk = 36
+  // Compose 1.11 and Material 3 1.5 need 37.1 or later
+  compileSdk { version = release(37) { minorApiLevel = 2 } }
   // Keep in sync with ANDROID_NDK_VERSION in mise.toml.
   ndkVersion = "30.0.16248370"
 
@@ -74,7 +110,9 @@ android {
 
     externalNativeBuild {
       cmake {
-        targets += "gk"
+        // libmain.so (the runtime), libextractor.so (an executable, see decompiler/CMakeLists.txt),
+        // and libog_process.so, which runs it
+        targets += listOf("gk", "extractor", "og_process")
         arguments +=
           listOf(
             "-DANDROID_STL=c++_static",
@@ -100,10 +138,24 @@ android {
     }
   }
 
+  buildFeatures { compose = true }
+
   buildTypes {
     // Development builds only for now, so release builds use the debug key too.
     named("release") { signingConfig = signingConfigs.getByName("debug") }
   }
 
-  packaging { jniLibs { useLegacyPackaging = false } }
+  // Android can only run the extractor from the native library folder on disk, so native code is
+  // unpacked from the APK at install time.
+  packaging { jniLibs { useLegacyPackaging = true } }
+}
+
+dependencies {
+  implementation(platform(libs.compose.bom))
+  implementation(libs.compose.material3)
+  implementation(libs.compose.ui.tooling.preview)
+  implementation(libs.activity.compose)
+  implementation(libs.lifecycle.runtime.compose)
+  implementation(libs.lifecycle.viewmodel.compose)
+  debugImplementation(libs.compose.ui.tooling)
 }

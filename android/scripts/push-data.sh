@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Push one game's data from this checkout to the app on the adb device. The desktop extractor must
-# have extracted and compiled the game first. x86_64 devices run the x86-64 object code that the
+# Push one game's data from this checkout to the app on the adb device, instead of installing it
+# from its ISO in the app (install-iso.sh). The desktop extractor must have extracted and compiled
+# the game first. x86_64 devices run the x86-64 object code that the
 # extractor makes by default; arm64 devices need --instruction-set arm64.
 #
 # The app ships the repository's own files (shaders, assets) in its APK, so only out/<game> goes

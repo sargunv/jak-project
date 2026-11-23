@@ -5,16 +5,20 @@ handheld such as the AYN Thor. Jak 2 and Jak 3 come after Jak 1.
 
 ## Status
 
-- `libmain.so` builds for `arm64-v8a` and `x86_64` with NDK r30. The APK
-  packages both. Pages are 16 KB aligned.
+- `libmain.so` and the extractor build for `arm64-v8a` and `x86_64` with NDK
+  r30. The APK packages both. Pages are 16 KB aligned.
+- The app installs a game from its ISO: the player picks the ISO in the
+  launcher, and the extractor makes the game's data on the device. Jak 1 takes
+  under a minute in Innkeeper and under the ARM translation emulator.
 - On `x86_64` in Innkeeper, Jak 1 renders like the desktop build at every level
   the render comparison visits, with no OpenGL errors. A gamepad (a virtual one,
   through Innkeeper) and the keyboard work, sound plays through AAudio, and New
   Game starts the intro. Nobody has played it for real yet.
 - On `arm64-v8a`, under the emulator's ARM translation and without a display,
   upstream's arm64 game code boots, reaches the title screen and loads into
-  Sandover. Rendering on arm64 needs hardware.
-- The desktop build still builds, and `goalc-test` passes (1669 tests).
+  Sandover, both compiled on a desktop and by the app's own extractor. Rendering
+  on arm64 needs hardware.
+- The desktop build still builds, and `goalc-test` passes (1672 tests).
 
 ## Done
 
@@ -101,6 +105,24 @@ Platform:
       installed.
 - [x] Log lines have no ANSI colors from the first one.
 
+Launcher and install:
+
+- [x] A launcher in Compose with Material 3 Expressive: the games in a segmented
+      list, each one installs from an ISO, plays, installs again or deletes its
+      data. System colors on Android 12 and later.
+- [x] The extractor ships in the APK as `libextractor.so` and runs as a child
+      process, which reads the ISO through a descriptor from the Storage Access
+      Framework. It extracts the ISO, checks it against the known copies,
+      decompiles and compiles for the device's CPU.
+- [x] Installs run in a foreground service with a progress notification, can be
+      cancelled, and keep the old install until the new one is done. Errors say
+      whether the file isn't an ISO, isn't a known copy of the game, or doesn't
+      fit.
+- [x] The extractor moves the extracted ISO into place instead of copying it,
+      which saved a second copy of the ISO's files.
+- [x] The game runs in its own process, since the runtime starts once per
+      process.
+
 ## Milestone 1: renders on x86_64
 
 Innkeeper and the emulator run the x86-64 object code, so the platform layer and
@@ -132,16 +154,17 @@ the renderer can be finished before any arm64 hardware is involved.
       Phones need a touch overlay.
 - [ ] **Audio latency** on a device. AAudio opens in low-latency mode with
       240-frame bursts in Innkeeper.
-- [ ] **Game data install.** `push-data.sh` is a development stand-in. Pick
-      between:
-  - Make the data on a desktop and copy it over. Simple, but awkward for
-    players.
-  - Run the extractor and compiler on the device, like Precursor does. It needs
-    `goalc` and the extractor built for Android, and a lot of memory: Precursor
-    reports Jak 3 peaking at 7.3 GB.
-
-  Either way, pick ISOs and data with the Storage Access Framework, and write
-  the data as the app, so it owns the files.
+- [ ] **Installs on hardware.** Time and memory on the Thor. The decompiler
+      reported 2.2 to 3 GB for Jak 1, and Precursor reports Jak 3 peaking at 7.3
+      GB, so check Jak 2 and Jak 3 on 8 GB devices. Android may kill the
+      extractor under memory pressure, which shows as a failed install.
+- [ ] Jak 2 and Jak 3 install the same way but are untested.
+- [ ] Disk use while installing is about 2.5 times the ISO: the extracted files,
+      the build's copies of most of them in `out/<game>/iso`, and the converted
+      data. Moving instead of copying in the build's `copy-iso-file` would save
+      one ISO's worth.
+- [ ] The installer has no tests. Its log parsing follows the extractor's log
+      lines, which can change upstream.
 
 - [ ] Settings, memory cards and screenshots in app storage, with backup and
       restore.
@@ -197,8 +220,8 @@ the renderer can be finished before any arm64 hardware is involved.
 
 - [ ] Name, package and icon. The app shouldn't present itself as OpenGOAL,
       which doesn't make or endorse it. The icon is upstream's.
-- [ ] A launcher: game list, data install progress, settings, saves, mods and
-      texture packs.
+- [ ] More launcher: settings, saves, mods and texture packs. The game list and
+      installs are done.
 - [ ] The Thor's second screen: show the map, menus or ImGui there through a
       second SDL window or Android's Presentation API.
 - [ ] Release signing, CI that builds both ABIs and the APK, and a routine for
@@ -211,4 +234,5 @@ the renderer can be finished before any arm64 hardware is involved.
 Upstream won't take Android changes, but a few of these are general fixes that a
 human could send on their own, without AI co-author trailers, per upstream's
 `AI_POLICY.md`: fmt's `<cstdlib>` include, the draco staging race, `-mavx` only
-on x86, and the Linux arm64 fixes that overlap PR #4439.
+on x86, the Linux arm64 fixes that overlap PR #4439, gk's `--port`, and the
+extractor moving its extracted ISO instead of copying it.

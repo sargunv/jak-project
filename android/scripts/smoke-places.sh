@@ -38,7 +38,7 @@ for place in "$@"; do
     >"$out/$place.goalc.log" 2>&1 &
   repl=$!
   sleep 75
-  pid=$(adb shell pidof "$package")
+  pid=$(adb shell pidof "$package:game")
   adb logcat -d -s OpenGOAL:V DEBUG:V libc:F AndroidRuntime:E >"$out/$place.log"
   pkill -9 -P "$repl" 2>/dev/null
   kill -9 "$repl" 2>/dev/null
