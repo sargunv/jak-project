@@ -1,0 +1,90 @@
+[settings]
+experimental = true
+pin = true
+lockfile = true
+lockfile_mode = "merge"
+
+[tools]
+"aqua:Kitware/CMake" = "4.5.1"
+"aqua:dprint/dprint" = "0.65.0"
+"aqua:go-task/task" = "3.54.0"
+"aqua:jdx/hk" = "2.13.0"
+"aqua:jdx/jactionlint" = "2.6.0"
+"aqua:ninja-build/ninja" = "1.13.2"
+"conda:nasm" = "2.16.03"
+"core:java" = "zulu-25.38.201.0"
+
+[env]
+ANDROID_HOME = "{{ env.ANDROID_HOME | default(value=env.HOME ~ '/Android/Sdk') }}"
+ANDROID_NDK_VERSION = "30.0.16248370"
+ANDROID_NDK_HOME = "{{ env.ANDROID_HOME }}/ndk/{{ env.ANDROID_NDK_VERSION }}"
+
+[tasks.check]
+run = "hk check --all"
+
+[tasks.fix]
+run = "hk fix --all"
+
+[hooks]
+postinstall = ["hk install --mise"]
+
+# ---- desktop -----------------------------------------------------------------
+# The compiler, decompiler and extractor run on the desktop. They also make the game data that
+# the Android app runs.
+
+[tasks."desktop:build"]
+description = "Build the desktop runtime, compiler, decompiler and extractor"
+run = """
+cmake --preset Release-linux-clang
+cmake --build build/Release/bin --target gk goalc decompiler extractor
+"""
+
+[tasks."desktop:extract"]
+description = "Extract, decompile and compile a game from its ISO into iso_data/ and out/"
+usage = '''
+arg "<game>" help="jak1, jak2 or jak3"
+arg "<iso>" help="Path to the game's ISO"
+flag "--instruction-set <set>" default="x86" help="x86 or arm64 object code"
+'''
+run = 'build/Release/bin/decompiler/extractor -g "${usage_game}" -e -d -c --instruction-set "${usage_instruction_set}" --proj-path "$PWD" "${usage_iso}"'
+
+# ---- android -----------------------------------------------------------------
+
+[tasks."android:native"]
+description = "Compile the native runtime for both Android ABIs, without Gradle"
+run = """
+for abi in arm64 x86_64; do
+  cmake --preset "Release-android-$abi"
+  cmake --build "out/build/Release-android-$abi" --target gk
+done
+"""
+
+[tasks."android:build"]
+description = "Build the debug APK"
+dir = "android"
+run = "./gradlew assembleDebug"
+
+[tasks."android:install"]
+description = "Install the debug APK on the adb device"
+depends = ["android:build"]
+run = "adb install -r android/app/build/outputs/apk/debug/app-debug.apk"
+
+[tasks."android:push-data"]
+description = "Push a game's extracted and compiled data to the adb device"
+usage = 'arg "[game]" default="jak1"'
+run = 'android/scripts/push-data.sh "${usage_game}"'
+
+[tasks."android:run"]
+description = "Start a game on the adb device"
+usage = '''
+arg "[game]" default="jak1"
+flag "--args <args>" default="-boot -fakeiso" help="Arguments for the game"
+'''
+run = """
+adb shell am force-stop dev.sargunv.opengoal
+adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game "${usage_game}" --es args "'${usage_args}'"
+"""
+
+[tasks."android:logcat"]
+description = "Follow the app's logs"
+run = "adb logcat -s OpenGOAL:V SDL:V DEBUG:V AndroidRuntime:E libc:F"
