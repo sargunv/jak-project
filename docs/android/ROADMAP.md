@@ -14,10 +14,9 @@ handheld such as the AYN Thor. Jak 2 and Jak 3 come after Jak 1.
   the render comparison visits, with no OpenGL errors. A gamepad (a virtual one,
   through Innkeeper) and the keyboard work, sound plays through AAudio, and New
   Game starts the intro. Nobody has played it for real yet.
-- On `arm64-v8a`, under the emulator's ARM translation and without a display,
-  upstream's arm64 game code boots, reaches the title screen and loads into
-  Sandover, both compiled on a desktop and by the app's own extractor. Rendering
-  on arm64 needs hardware.
+- On the AYN Thor (`arm64-v8a`, Adreno 740), Jak 1 installs from its CHD in the
+  launcher and plays from the launcher at 60 fps, every frame shown for one
+  refresh. Jak 1's opening has been played with the built-in controls.
 - The desktop build still builds, and `goalc-test` passes (1672 tests).
 
 ## Done
@@ -91,8 +90,9 @@ Platform:
       matches OpenGL ES's fixed restart index. The OpenGL ES stand-in warns if
       that ever changes.
 - [x] The window always fills the screen: display mode, size and position
-      changes only record the setting. `OG_RENDER_SCALE` renders below the
-      screen's resolution.
+      changes only record the setting. The game's own resolution menu offers the
+      screen's size and 75% and 50% of it, which the renderer scales up, as
+      borderless mode does on desktop.
 - [x] Audio through cubeb's AAudio backend (its OpenSL ES backend needs Java
       that cubeb only reaches inside Firefox), stopped while the app is in the
       background.
@@ -132,26 +132,52 @@ On the AYN Thor (Android 13, Snapdragon 8 Gen 2, Adreno 740, 16 GB):
 - [x] Jak 1 installs from the CHD in the Thor's ROM folder in 104 s (75 s of it
       decompressing the CHD), and plays from the launcher: it reaches the title
       screen at 1920x1080.
+- [x] Jak II installs from its CHD in 5 min 20 s (peak 4.5 GB, 4.8 GB installed)
+      and Jak 3 in 5 min 33 s (peak 5.8 GB, 5.2 GB installed). Both reach their
+      title screens and hold 60 fps there. Neither has been played.
+- [x] Frame pacing. The Thor's screen runs at 120 Hz (its settings force a
+      minimum of 120), and the game's frame limiter put 8% of frames on the
+      screen for one or three refreshes instead of two. `GameActivity` now picks
+      the display mode for the game's frame rate (`preferredDisplayModeId`,
+      which overrides that minimum), and at 60 Hz every frame shows for exactly
+      one refresh (`dumpsys SurfaceFlinger --latency`). The game's menus still
+      offer frame rates up to the screen's fastest mode, which the runtime asks
+      `GameActivity` for (`game/android/activity.cpp`).
+- [x] The REPL works on the Thor: goalc connects through `adb forward`, and
+      arm64 code that it compiles runs on the device. The listener problem under
+      the translation emulator is the emulator's.
+- [x] Rumble. The Thor's controller has no motor of its own, so SDL reports no
+      rumble for it. Controllers without rumble use the device's vibrator,
+      through `GameActivity`, as media: SDL's own vibrations have no usage, so
+      Android counts them as touch feedback, which the Thor has turned off.
+- [x] The game no longer starts with a black bar over its top 55 px: when the
+      window started with the status bar showing, it kept drawing the bar's
+      background over the game. `GameActivity` hides the bars before SDL's
+      window exists.
+- [x] The Adreno 740 has `GL_NV_shader_noperspective_interpolation`, so the sky
+      interpolates as on desktop. Skinned characters (merc) render correctly, so
+      the Adreno 6xx bone uniform bug that Precursor worked around doesn't
+      affect it.
 
 ## Milestone 1: renders on x86_64
 
 Innkeeper and the emulator run the x86-64 object code, so the platform layer and
 the renderer can be finished before any arm64 hardware is involved.
 
-- [ ] GL debug output is on, and `render:compare` reports GL errors and warnings
-      per place. ANGLE reports none at the 13 places it visits. Adreno reports
-      its own driver notes ("Packing allocations for resource") with type
-      0x7FFFFFFF, which the log calls errors: filter them.
+- [x] GL debug output is on, and `render:compare` reports GL errors and warnings
+      per place. ANGLE reports none at the 13 places it visits. Adreno's own
+      driver notes ("Packing allocations for resource", type 0x7FFFFFFF) log as
+      debug messages instead of errors.
 - [x] The game hides the status and navigation bars: the window is created
       fullscreen, and the display manager reads the window's size every frame,
       since hiding the bars resizes the window without an event reaching it. The
       Thor's system UI still draws its own home handle (`SecondaryHomeHandle`)
       over fullscreen apps.
-- [ ] `glGetTexImage` is a no-op on OpenGL ES. Only debug texture dumps use it;
-      read through a framebuffer with `glReadPixels` instead.
-- [ ] The game's own menus still offer display modes, monitors and resolutions,
-      which do nothing on Android. Hiding them means changing `goal_src`'s PC
-      menus. A render-scale setting needs a place in the app's settings.
+- [x] `glGetTexImage` on OpenGL ES reads level 0 of a 2D texture through a
+      framebuffer with `glReadPixels`, for debug texture dumps.
+- [x] Jak 1's graphics menu disables display mode and monitor on Android, where
+      the game always fills the screen: `pc-get-os` returns `android`. Jak II
+      and Jak 3 have their own menus, still to do.
 - [ ] Pixel-exact render comparisons. Frame numbers don't line up the game state
       between builds, so the comparison shows the same place from slightly
       different moments. Capturing a frame's DMA chain on one build and
@@ -159,9 +185,9 @@ the renderer can be finished before any arm64 hardware is involved.
       level data asynchronously, which replay would have to wait for.
       `FixedChunkDmaCopier` has an unused `serialize_last_result` to start from.
 - [ ] The sky's `noperspective` falls back to perspective interpolation where
-      the driver lacks `GL_NV_shader_noperspective_interpolation`. Check the sky
-      on Adreno.
-- [ ] `--gpu-test` still asks for desktop OpenGL 4.3 in its context attributes.
+      the driver lacks `GL_NV_shader_noperspective_interpolation`. The Adreno
+      740 has it; check the sky on a GPU without it.
+- [x] `--gpu-test` asks for the same OpenGL ES 3.2 context as the game.
 
 ## Milestone 2: playable on x86_64
 
@@ -171,23 +197,34 @@ the renderer can be finished before any arm64 hardware is involved.
       buttons" setting undoes (`OG_SWAP_FACE_BUTTONS`, applied before the game's
       position-based binds). Phones need a touch overlay.
 - [ ] **Audio latency** on a device. AAudio opens in low-latency mode with
-      240-frame bursts in Innkeeper.
-- [ ] **Installs on hardware.** Time and memory on the Thor. The decompiler
-      reported 2.2 to 3 GB for Jak 1, and Precursor reports Jak 3 peaking at 7.3
-      GB, so check Jak 2 and Jak 3 on 8 GB devices. Android may kill the
-      extractor under memory pressure, which shows as a failed install.
-- [ ] Jak 2 and Jak 3 install the same way but are untested.
-- [ ] Disk use while installing is about 2.5 times the ISO: the extracted files,
-      the build's copies of most of them in `out/<game>/iso`, and the converted
-      data. Moving instead of copying in the build's `copy-iso-file` would save
-      one ISO's worth.
-- [ ] The installer has no tests. Its log parsing follows the extractor's log
-      lines, which can change upstream.
+      240-frame bursts in Innkeeper. On the Thor it's a fast mixer track on the
+      media stream, not MMAP, and the system volume applies its usual curve.
+- [ ] **Install memory.** Jak II's decompile peaked at 7 GB with a thread per
+      level, and Android's low memory killer stopped the app on the 16 GB Thor.
+      The decompiler config's `level_extract_threads` limits how many levels
+      extract at once, and the installer passes 4, which peaks at 5.4 GB on
+      desktop. Jak II's build also loaded every DGO again for its `test-zone`
+      custom level, to find one texture; on Android, custom levels go without
+      textures and art groups from the game. Most of the rest is the decompiler
+      holding every DGO's linked words (16 bytes per 4-byte word, 2.4 GB for Jak
+      II) and every decoded texture (1.5 GB) at once. 8 GB devices need less:
+      pack `LinkedWord` into 12 bytes, or extract levels without loading every
+      DGO first. Interning symbol names in `LinkedWord` saved nothing. When
+      Android stops an install, the launcher says so the next time it opens.
+- [x] Jak II and Jak 3 compile Jak 1's PC kernel (`goal_src/jak1/pc`), which the
+      APK now unpacks for them too.
+- [x] Disk use while installing: the build hard-links the ISO's files into
+      `out/<game>/iso` on Android instead of copying them, which saves one ISO's
+      worth. The free space check and the progress bar use a CHD's uncompressed
+      size.
+- [x] Installer tests (`android:test`, JVM): the log parsing on the extractor's
+      log lines, exit statuses, CHD sizes, and a check that the extractor's
+      source still logs the lines the parser follows.
 
 - [ ] Settings, memory cards and screenshots in app storage, with backup and
       restore.
-- [ ] **Performance.** Frame pacing (`ANativeWindow_setFrameRate`, or Swappy),
-      120 Hz panels, and thread placement on big.LITTLE cores.
+- [ ] **Performance.** Thread placement on big.LITTLE cores, and frame times in
+      busy levels. Frame pacing at 60 fps is done (see the Thor).
 - [ ] Aspect ratios: the Thor's 16:9 top screen and 20:9 phones.
 - [x] REPL over `adb forward` works in Innkeeper.
 
@@ -196,12 +233,9 @@ the renderer can be finished before any arm64 hardware is involved.
 - [x] arm64 game data: `goalc --instruction-set arm64` in a separate checkout
       (README), pushed with `push-data.sh`. The arm64 objects are 11 to 17%
       larger than x86-64's.
-- [ ] **The listener never accepts on the translation emulator.** The arm64
-      build listens on 8112, but connections time out, even from inside the
-      device: the first completes into the backlog of 0 and nothing accepts it.
-      `select_and_accept_socket` probably never sees the socket as readable
-      under translation. Check on hardware: if it happens there too, it's an
-      arm64 bug.
+- [x] The listener never accepts on the translation emulator: connections time
+      out, even from inside the device. On the Thor it works, so it's the
+      emulator's translation, not the arm64 build.
 - [ ] **Check the upstream ARM64 backend against the standard ARM64 ABI.**
       Upstream tested it on macOS, and Apple's ABI differs from Linux and
       Android:
@@ -209,17 +243,17 @@ the renderer can be finished before any arm64 hardware is involved.
   - [x] Apple makes `char` signed, Linux and Android unsigned. Handled with
         `-fsigned-char` (upstream PR #4439 instead changes `kprint`'s argument
         buffer to `s8`).
-  - [ ] Apple guarantees a 128-byte red zone below `sp`. Linux and Android
-        don't, so a signal can overwrite anything the generated code keeps
-        there. Check whether the emitter or `asm_funcs_arm64.s` ever stores
-        below `sp`.
-  - [ ] Variadic calls pass arguments differently on Apple. Check that no C
-        function that GOAL calls is variadic.
-  - [ ] Pages are 4 KB or 16 KB on Android, 16 KB on Apple. Check the EE memory
-        mapping.
-  - [ ] Executable memory: the runtime maps EE memory read, write and execute.
-        Android allows that for apps, but check it on a real device, and that
-        `__builtin___clear_cache` covers every code write.
+  - [x] Red zone: Apple guarantees 128 bytes below `sp`, Linux and Android
+        don't. Neither the emitter nor `asm_funcs_arm64.s` stores below `sp`:
+        every push moves `sp` first, and spills are at positive offsets.
+  - [x] Variadic calls pass arguments differently on Apple. No C function that
+        GOAL calls is variadic: `format` goes through `_stack_call_arm64`, which
+        builds its own argument array.
+  - [x] Pages: EE memory is mapped without `MAP_FIXED` at a 16 MB aligned hint,
+        and the one `mprotect` covers 512 KB, so 4 KB and 16 KB pages both work.
+  - [x] Executable memory: the linker, C stubs and mips2c stubs all flush with
+        `__builtin___clear_cache` over what they wrote before running it, and
+        the Thor runs the game.
 - [ ] Heap sizes: arm64 code is bigger. Upstream PR #4439 raised Jak II's
       `DEBUG_LEVEL_HEAP_MULT` to 1.15 for the kid escort mission. Precursor
       found x86-sized backup stacks too small on its own backend. Upstream's
@@ -230,9 +264,8 @@ the renderer can be finished before any arm64 hardware is involved.
       `qemu-aarch64` user mode with a Linux arm64 `goalc-test` would test the
       backend on the standard ABI without a translator in between, but needs a
       Linux arm64 sysroot.
-- [ ] On the Thor itself: performance on the Snapdragon 8 Gen 2 and Adreno 740,
-      and Adreno driver bugs (Precursor needed a workaround for bone uniforms on
-      Adreno 6xx).
+- [ ] On the Thor itself: frame times in busy levels on the Snapdragon 8 Gen 2.
+      The title screen and Geyser Rock hold 60 fps.
 
 ## Milestone 4: an app for players
 

@@ -51,6 +51,8 @@ instead copies game data that the desktop extractor made
 
 `mise run android:native` compiles the native code for both ABIs without Gradle,
 which is the fastest way to check that native changes compile.
+`mise run android:test` runs the app's JVM tests, which cover how the installer
+reads the extractor's log.
 
 ### Installing from an ISO
 
@@ -66,12 +68,18 @@ through a copy of that descriptor (`file_util::open_file`).
 The extractor works in `files/install/` with the files it needs from the APK
 (`goal_src/`, the decompiler's config, the assets), which takes about 2.5 times
 the ISO's size while it runs. Only `out/<game>/iso` and `out/<game>/fr3` move
-into the runtime's data folder, and the rest is deleted. Jak 1 takes about 30
-seconds in Innkeeper and 50 under the emulator's ARM translation, and ends up
-1.6 GB.
+into the runtime's data folder, and the rest is deleted. On Android, the build
+hard-links the ISO's files into `out/<game>/iso` instead of copying them, and
+level extraction runs four levels at a time (`level_extract_threads`) to keep
+memory down. Jak 1 takes about 30 seconds in Innkeeper and 50 under the
+emulator's ARM translation, and ends up 1.6 GB.
 
 `GameActivity` runs in its own process (`:game`), since the runtime can only
-start once per process, and that process ends with the game.
+start once per process, and that process ends with the game. It does what only
+Java can for the runtime (`game/android/activity.cpp`): it switches the display
+to the refresh rate that matches the game's frame rate, and vibrates the device
+for controllers without rumble. Call those from the graphics thread: Java can't
+attach the EE thread, which runs on the runtime's own stack.
 
 ### Graphics
 
