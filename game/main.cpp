@@ -108,7 +108,8 @@ int main(int argc, char** argv) {
   app.add_flag("--version", show_version, "Display the built revision");
   app.add_option("-g,--game", game_name, "The game name: 'jak1' or 'jak2'");
   app.add_flag("-v,--verbose", verbose_logging, "Enable verbose logging on stdout");
-  app.add_flag(
+  // An option, not a flag: CLI11 counts an integer flag, so leaving it out would mean port 0
+  app.add_option(
       "--port", port_number,
       "Specify port number for listener connection (default is 8112 for Jak 1 and 8113 for Jak 2)");
   app.add_flag("--no-avx2", disable_avx2, "Disable AVX2 for testing");
@@ -175,7 +176,7 @@ int main(int argc, char** argv) {
   game_options.disable_display = disable_display;
   game_options.game_version = game_name_to_version(game_name);
   game_options.server_port =
-      port_number == -1 ? DECI2_PORT - 1 + (int)game_options.game_version : port_number;
+      port_number <= 0 ? DECI2_PORT - 1 + (int)game_options.game_version : port_number;
 
   // Figure out if the CPU has AVX2 to enable higher performance AVX2 versions of functions.
   setup_cpu_info();
