@@ -133,8 +133,8 @@ On the AYN Thor (Android 13, Snapdragon 8 Gen 2, Adreno 740, 16 GB):
       decompressing the CHD), and plays from the launcher: it reaches the title
       screen at 1920x1080.
 - [x] Jak II installs from its CHD in 5 min 20 s (peak 4.5 GB, 4.8 GB installed)
-      and Jak 3 in 5 min 33 s (5.2 GB installed), when memory allows (see
-      install memory). Jak II has been played through the fortress escape.
+      and Jak 3 in 5 min 26 s (5.2 GB installed). Jak II has been played through
+      the fortress escape.
 - [x] Frame times: Haven City (Jak II), Jak 3's opening cutscene, and Jak 1's
       citadel and snowy mountain all hold 60 fps, every frame shown for one
       refresh.
@@ -213,23 +213,20 @@ the renderer can be finished before any arm64 hardware is involved.
 - [ ] **Audio latency** on a device. AAudio opens in low-latency mode with
       240-frame bursts in Innkeeper. On the Thor it's a fast mixer track on the
       media stream, not MMAP, and the system volume applies its usual curve.
-- [ ] **Install memory.** Jak 3's install peaks at 8.9 GB (desktop, 4 level
-      threads), while decoding textures, and Android stops it on the 16 GB Thor
-      unless little else is running. Jak II's decompile peaked at 7 GB with a
-      thread per level, and Android's low memory killer stopped the app on the
-      16 GB Thor. The decompiler config's `level_extract_threads` limits how
-      many levels extract at once, and the installer passes 4, which peaks at
-      5.4 GB on desktop. Jak II's build also loaded every DGO again for its
-      `test-zone` custom level, to find one texture; on Android, custom levels
-      go without textures and art groups from the game. Most of the rest is the
-      decompiler holding every DGO's linked words (16 bytes per 4-byte word, 2.4
-      GB for Jak II) and every decoded texture (1.5 GB) at once. 8 GB devices
-      need less: pack `LinkedWord` into 12 bytes, or extract levels without
-      loading every DGO first. Interning symbol names in `LinkedWord` saved
-      nothing. When Android stops an install, the launcher says so the next time
-      it opens. The installer reads the ISO through its own copy of the
-      provider's descriptor: while the provider's was open, Android stopped the
-      app whenever it stopped External Storage for memory.
+- [ ] **Install memory.** Jak 3's install peaks at 5.1 GB on the Thor, in the
+      decompile, and installs reliably there; it peaked near 7 GB and Android
+      stopped it. What brought it down: the decompiler's linked words take 8
+      bytes instead of 16 (6.4 to 5.0 GB on desktop), the compiler drops each
+      function's debug info in builds that won't debug (`keep-debug-info`, a
+      clean Jak 3 build 5.9 to 3.3 GB on the Thor), the installer compiles in a
+      second extractor run, `level_extract_threads` limits level extraction to 4
+      at a time, and on Android custom levels don't load every DGO again for
+      their textures. The decompile still holds every DGO's linked data and
+      every decoded texture at once, which 8 GB devices may not fit. Skipping
+      code analysis or extracting one level at a time saved little. When Android
+      stops an install, the launcher says so the next time it opens, and the
+      installer reads the ISO through its own copy of the provider's descriptor,
+      so Android stopping External Storage doesn't stop it.
 - [x] Jak II and Jak 3 compile Jak 1's PC kernel (`goal_src/jak1/pc`), which the
       APK now unpacks for them too.
 - [x] Disk use while installing: the build hard-links the ISO's files into
