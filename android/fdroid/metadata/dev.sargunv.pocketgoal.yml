@@ -1,0 +1,16 @@
+Categories:
+  - Games
+License: ISC
+SourceCode: https://github.com/sargunv/jak-project
+IssueTracker: https://github.com/sargunv/jak-project/issues
+Changelog: https://github.com/sargunv/jak-project/releases
+
+AutoName: PocketGOAL
+Summary: OpenGOAL's Jak and Daxter, Jak II and Jak 3, from your own disc images
+Description: |-
+  An Android build of OpenGOAL, the PC port of Jak and Daxter, Jak II and Jak 3.
+
+  Bring your own disc images (ISO or CHD). The app installs each game from its
+  image on the device.
+
+  Not affiliated with the OpenGOAL project.

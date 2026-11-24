@@ -162,6 +162,24 @@ last. Release builds sign with the release key in the repository's Actions
 secrets (`POCKETGOAL_KEYSTORE_BASE64` and its passwords), and with the debug key
 when built locally.
 
+Each release also rebuilds the F-Droid repo at
+`https://code.sargunv.dev/jak-project/repo` (`android-fdroid.yaml`, on GitHub
+Pages). fdroidserver indexes the three newest releases' APKs, which keep the
+release key's signature, and signs the index with the repo's own key
+(`FDROID_KEYSTORE_BASE64`). Its config and the app's metadata are in
+`android/fdroid/`. The release's title is the version name, which Obtainium
+compares with the installed app's.
+
+### Data versions
+
+A game's data is only good for the extractor and compiler that made it. The
+build hashes the files that make each game's data (the decompiler, the compiler,
+`goal_src/<game>` and the game's decompiler config) into `data-versions.txt` in
+the APK, and the installer writes that hash to `out/<game>/.data-version`. When
+they differ, the launcher says the game needs an update, and installs it again
+from the disc image the player picked last time, whose read permission the app
+keeps.
+
 ## Rules
 
 - Never commit game data. `iso_data/`, `out/` and `decompiler_out/` are ignored.

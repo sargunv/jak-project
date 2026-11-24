@@ -1,0 +1,10 @@
+# fdroidserver's config for the F-Droid repo (.github/workflows/android-fdroid.yaml). The workflow
+# adds the signing settings from the repository's Actions secrets.
+repo_url: https://code.sargunv.dev/jak-project/repo
+repo_name: PocketGOAL
+repo_icon: icon.png
+repo_description: >-
+  Releases of PocketGOAL, an Android build of OpenGOAL. Built and signed by the
+  sargunv/jak-project GitHub workflows.
+# Keeps the newest three releases in the repo, which is all the workflow downloads.
+archive_older: 3

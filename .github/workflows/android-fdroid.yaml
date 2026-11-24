@@ -1,0 +1,89 @@
+name: Android F-Droid Repo
+
+# Rebuilds the F-Droid repo from the newest releases' APKs and publishes it to GitHub Pages
+# (https://code.sargunv.dev/jak-project/repo). Nightly builds aren't in it.
+
+on:
+  workflow_call:
+    secrets:
+      FDROID_KEYSTORE_BASE64:
+        required: true
+      FDROID_KEYSTORE_PASSWORD:
+        required: true
+  workflow_dispatch:
+
+concurrency:
+  group: android-fdroid
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: android/fdroid
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Install fdroidserver
+        run: pipx install fdroidserver==2.4.5
+
+      - name: Download APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir repo
+          gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName \
+            --jq '[.[].tagName | select(startswith("pocketgoal-v"))][:3][]' |
+            xargs -r -n 1 gh release download --pattern 'PocketGOAL-*.apk' --dir repo
+          ls -l repo
+
+      # The repo's own key, which signs the index. The APKs keep the release key's signature.
+      - name: Signing Config
+        env:
+          FDROID_KEYSTORE_BASE64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$FDROID_KEYSTORE_BASE64" | base64 -d > keystore.p12
+          cat >> config.yml <<'CONFIG'
+          keystore: keystore.p12
+          repo_keyalias: pocketgoal-fdroid
+          keystorepass: {env: FDROID_KEYSTORE_PASSWORD}
+          keypass: {env: FDROID_KEYSTORE_PASSWORD}
+          CONFIG
+          chmod 600 config.yml keystore.p12
+
+      - name: Update Repo
+        env:
+          FDROID_KEYSTORE_PASSWORD: ${{ secrets.FDROID_KEYSTORE_PASSWORD }}
+        run: |
+          fdroid update --pretty
+          mkdir -p "$RUNNER_TEMP/site"
+          mv repo archive "$RUNNER_TEMP/site/"
+          rm keystore.p12
+
+      - name: Upload Site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/site
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}repo
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5

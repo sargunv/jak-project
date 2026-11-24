@@ -296,7 +296,10 @@ the renderer can be finished before any arm64 hardware is involved.
       second SDL window or Android's Presentation API.
 - [x] Release signing, CI that lints and builds desktop and the APK, a nightly
       prerelease that replaces itself, tagged releases, and an agent skill for
-      rebasing on upstream.
+      merging upstream.
+- [x] Updates: an F-Droid repo of the releases on GitHub Pages, and an Obtainium
+      link. After an update that changes how a game's data is made, the launcher
+      asks to install the game again, from the disc image picked last time.
 - [ ] Web requests for the leaderboards: Android's HTTP client through JNI, or
       libcurl with a TLS library that builds for Android.
 

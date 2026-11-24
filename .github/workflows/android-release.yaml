@@ -58,8 +58,22 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
           VERSION: ${{ needs.version.outputs.version }}
+          # The title is the app's version name, which Obtainium compares with the installed app's
+          VERSION_NAME: ${{ needs.build.outputs.versionName }}
         run: |
           gh release create "$TAG" "PocketGOAL-$VERSION.apk" \
             --verify-tag \
             --generate-notes \
-            --title "PocketGOAL $VERSION"
+            --title "$VERSION_NAME"
+
+  fdroid:
+    name: F-Droid
+    needs: publish
+    uses: ./.github/workflows/android-fdroid.yaml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    secrets:
+      FDROID_KEYSTORE_BASE64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+      FDROID_KEYSTORE_PASSWORD: ${{ secrets.FDROID_KEYSTORE_PASSWORD }}

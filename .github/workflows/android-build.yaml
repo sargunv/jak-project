@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: "0.0.0-dev"
+    outputs:
+      versionName:
+        description: "The app's version name, such as 1.2.3+opengoal.0.3.9"
+        value: ${{ jobs.build.outputs.versionName }}
     secrets:
       POCKETGOAL_KEYSTORE_BASE64:
         required: false
@@ -31,6 +35,8 @@ jobs:
     name: APK
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    outputs:
+      versionName: ${{ steps.build.outputs.versionName }}
     steps:
       # The whole history and tags, for the commit count and the upstream version
       - name: Checkout Repository
@@ -74,6 +80,7 @@ jobs:
           echo "POCKETGOAL_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
       - name: Build
+        id: build
         working-directory: android
         env:
           POCKETGOAL_COMPILER_LAUNCHER: sccache
@@ -86,8 +93,10 @@ jobs:
           upstream=$(git describe --tags --abbrev=0 --match 'v[0-9]*')
           if [ "$VERSION" = nightly ]; then VERSION="nightly-$(git rev-parse --short HEAD)"; fi
           export POCKETGOAL_VERSION_NAME="$VERSION+opengoal.${upstream#v}"
-          export POCKETGOAL_VERSION_CODE=$(git rev-list --count HEAD)
+          POCKETGOAL_VERSION_CODE=$(git rev-list --count HEAD)
+          export POCKETGOAL_VERSION_CODE
           echo "Version $POCKETGOAL_VERSION_NAME ($POCKETGOAL_VERSION_CODE)"
+          echo "versionName=$POCKETGOAL_VERSION_NAME" >> "$GITHUB_OUTPUT"
           ./gradlew --no-configuration-cache --stacktrace testDebugUnitTest ${{ inputs.release && 'assembleRelease' || 'assembleDebug' }}
 
       - name: Name APK
