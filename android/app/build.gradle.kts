@@ -104,8 +104,10 @@ android {
     applicationId = "dev.sargunv.pocketgoal"
     minSdk = 28
     targetSdk = 36
-    versionCode = 1
-    versionName = "0.1.0"
+    // CI passes the version: the tag's for releases, and the commit count as the code, which grows
+    // with every commit on the branch, so each build installs over the last
+    versionCode = providers.environmentVariable("POCKETGOAL_VERSION_CODE").orNull?.toInt() ?: 1
+    versionName = providers.environmentVariable("POCKETGOAL_VERSION_NAME").orNull ?: "0.0.0-dev"
 
     ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
 
@@ -120,6 +122,11 @@ android {
             "-DSTATICALLY_LINK=true",
             "-DZYDIS_BUILD_SHARED_LIB=OFF",
           )
+        // A compiler cache, such as CI's sccache
+        providers.environmentVariable("POCKETGOAL_COMPILER_LAUNCHER").orNull?.let {
+          arguments +=
+            listOf("-DCMAKE_C_COMPILER_LAUNCHER=$it", "-DCMAKE_CXX_COMPILER_LAUNCHER=$it")
+        }
       }
     }
   }
@@ -141,9 +148,27 @@ android {
 
   buildFeatures { compose = true }
 
+  // Release builds sign with the release key when CI provides it (POCKETGOAL_KEYSTORE, a path, and
+  // the passwords), and with the debug key otherwise, for local testing.
+  val releaseKeystore = providers.environmentVariable("POCKETGOAL_KEYSTORE").orNull
+  signingConfigs {
+    if (releaseKeystore != null) {
+      create("release") {
+        storeFile = file(releaseKeystore)
+        storePassword = providers.environmentVariable("POCKETGOAL_KEYSTORE_PASSWORD").get()
+        keyAlias = providers.environmentVariable("POCKETGOAL_KEY_ALIAS").get()
+        keyPassword = providers.environmentVariable("POCKETGOAL_KEY_PASSWORD").get()
+      }
+    }
+  }
+
   buildTypes {
-    // Development builds only for now, so release builds use the debug key too.
-    named("release") { signingConfig = signingConfigs.getByName("debug") }
+    named("release") {
+      signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
+      // Upstream's Release, as its desktop presets use. Gradle's default, RelWithDebInfo, gets a
+      // Windows-only linker flag from the top-level CMakeLists.
+      externalNativeBuild { cmake { arguments += "-DCMAKE_BUILD_TYPE=Release" } }
+    }
   }
 
   // Android can only run the extractor from the native library folder on disk, so native code is

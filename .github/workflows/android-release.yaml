@@ -1,0 +1,50 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: android-release-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/android-build.yaml
+    with:
+      release: true
+      versionName: ${{ github.ref_name }}
+    secrets:
+      POCKETGOAL_KEYSTORE_BASE64: ${{ secrets.POCKETGOAL_KEYSTORE_BASE64 }}
+      POCKETGOAL_KEYSTORE_PASSWORD: ${{ secrets.POCKETGOAL_KEYSTORE_PASSWORD }}
+      POCKETGOAL_KEY_ALIAS: ${{ secrets.POCKETGOAL_KEY_ALIAS }}
+      POCKETGOAL_KEY_PASSWORD: ${{ secrets.POCKETGOAL_KEY_PASSWORD }}
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v8
+        with:
+          name: apk-release
+
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" "PocketGOAL-$TAG.apk" \
+            --verify-tag \
+            --generate-notes \
+            --title "PocketGOAL $TAG"

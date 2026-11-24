@@ -1,8 +1,9 @@
 # Android port
 
-An Android build of the OpenGOAL runtime, kept in this fork. Upstream OpenGOAL
-doesn't accept Android contributions, so this work stays here and gets rebased
-on upstream `master`.
+PocketGOAL, an Android build of the OpenGOAL runtime, kept in this fork.
+Upstream OpenGOAL doesn't accept Android contributions, so this work stays on
+the `android` branch and gets rebased on upstream `master`
+([`.claude/skills/upstream-rebase`](../../.claude/skills/upstream-rebase/SKILL.md)).
 
 The app builds for `arm64-v8a` (the target, such as Snapdragon handhelds) and
 `x86_64` (emulators and [Innkeeper](https://github.com/sargunv/innkeeper) on a
@@ -145,6 +146,18 @@ flatpak run dev.sargunv.Innkeeper --profile opengoal profile start
 
 `profile list` shows the profile's adb serial. Set `ANDROID_SERIAL` to it when
 more than one device is connected.
+
+## Releases
+
+CI (`.github/workflows/android.yaml`) lints, builds desktop and runs its tests,
+and builds the APK on every push and PR to `android`. Each push to `android`
+then replaces the `nightly` prerelease with a signed build. Pushing a `v1.2.3`
+tag publishes release 1.2.3 (`android-release.yaml`).
+
+The version code is the branch's commit count, so every build installs over the
+last. Release builds sign with the release key in the repository's Actions
+secrets (`POCKETGOAL_KEYSTORE_BASE64` and its passwords), and with the debug key
+when built locally.
 
 ## Rules
 

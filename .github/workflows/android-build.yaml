@@ -1,0 +1,95 @@
+name: Android Build
+
+on:
+  workflow_call:
+    inputs:
+      release:
+        description: "Build the signed release APK instead of the debug one"
+        required: false
+        type: boolean
+        default: false
+      versionName:
+        required: false
+        type: string
+        default: "0.0.0-dev"
+    secrets:
+      POCKETGOAL_KEYSTORE_BASE64:
+        required: false
+      POCKETGOAL_KEYSTORE_PASSWORD:
+        required: false
+      POCKETGOAL_KEY_ALIAS:
+        required: false
+      POCKETGOAL_KEY_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      # The whole history, for the commit count that versions the build
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Tools
+        uses: jdx/mise-action@v5
+        with:
+          install_args: core:java aqua:Kitware/CMake aqua:ninja-build/ninja conda:nasm aqua:jdx/hk
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-37.2 ndk;30.0.16248370"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Setup sccache
+        uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          variant: sccache
+          key: android-${{ inputs.release }}-${{ github.sha }}
+          restore-keys: android-${{ inputs.release }}
+          max-size: 2000M
+
+      - name: Prepare Release Signing
+        if: ${{ inputs.release }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.POCKETGOAL_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "POCKETGOAL_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: android
+        env:
+          POCKETGOAL_COMPILER_LAUNCHER: sccache
+          VERSION_NAME: ${{ inputs.versionName }}
+          POCKETGOAL_KEYSTORE_PASSWORD: ${{ secrets.POCKETGOAL_KEYSTORE_PASSWORD }}
+          POCKETGOAL_KEY_ALIAS: ${{ secrets.POCKETGOAL_KEY_ALIAS }}
+          POCKETGOAL_KEY_PASSWORD: ${{ secrets.POCKETGOAL_KEY_PASSWORD }}
+        run: |
+          # v1.2.3 tags make version 1.2.3
+          export POCKETGOAL_VERSION_NAME="${VERSION_NAME#v}"
+          export POCKETGOAL_VERSION_CODE=$(git rev-list --count HEAD)
+          ./gradlew --no-configuration-cache testDebugUnitTest ${{ inputs.release && 'assembleRelease' || 'assembleDebug' }}
+
+      - name: Name APK
+        env:
+          VERSION_NAME: ${{ inputs.versionName }}
+        run: |
+          mkdir dist
+          cp android/app/build/outputs/apk/*/app-*.apk "dist/PocketGOAL-$VERSION_NAME.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: apk-${{ inputs.release && 'release' || 'debug' }}
+          path: dist/*.apk
+          if-no-files-found: error

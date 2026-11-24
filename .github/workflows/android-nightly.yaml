@@ -1,0 +1,63 @@
+name: Android Nightly
+
+on:
+  workflow_call:
+    secrets:
+      POCKETGOAL_KEYSTORE_BASE64:
+        required: true
+      POCKETGOAL_KEYSTORE_PASSWORD:
+        required: true
+      POCKETGOAL_KEY_ALIAS:
+        required: true
+      POCKETGOAL_KEY_PASSWORD:
+        required: true
+  workflow_dispatch: {}
+
+# A newer push waits for the release in progress, so the last one published is the newest
+concurrency:
+  group: android-nightly-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/android-build.yaml
+    with:
+      release: true
+      versionName: nightly
+    secrets:
+      POCKETGOAL_KEYSTORE_BASE64: ${{ secrets.POCKETGOAL_KEYSTORE_BASE64 }}
+      POCKETGOAL_KEYSTORE_PASSWORD: ${{ secrets.POCKETGOAL_KEYSTORE_PASSWORD }}
+      POCKETGOAL_KEY_ALIAS: ${{ secrets.POCKETGOAL_KEY_ALIAS }}
+      POCKETGOAL_KEY_PASSWORD: ${{ secrets.POCKETGOAL_KEY_PASSWORD }}
+
+  # One floating prerelease, replaced by each build, so old nightlies don't pile up
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v8
+        with:
+          name: apk-release
+
+      - name: Replace Nightly Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly PocketGOAL-nightly.apk \
+            --target "$COMMIT" \
+            --prerelease \
+            --title "Nightly" \
+            --notes "The latest build of \`$BRANCH\`, at $COMMIT. It replaces itself with each push."

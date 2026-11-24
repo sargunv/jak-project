@@ -1,0 +1,39 @@
+name: Android Lint
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  formatting:
+    name: Formatting
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      # Upstream code keeps upstream's clang-format check (linting.yaml)
+      - name: Get Package Dependencies
+        shell: bash
+        run: |
+          sudo apt update
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
+          sudo apt install clang-format-18
+
+      - name: Check Clang-Formatting
+        run: |
+          chmod +x ./third-party/run-clang-format/run-clang-format.py
+          ./third-party/run-clang-format/run-clang-format.py -r common decompiler game goalc test tools lsp --color always --clang-format-executable $(which clang-format-18)
+
+      # The files this fork adds (hk.pkl)
+      - name: Install Tools
+        uses: jdx/mise-action@v5
+        with:
+          install_args: aqua:jdx/hk aqua:dprint/dprint aqua:astral-sh/ruff
+
+      - name: Check Fork Formatting
+        run: hk check --all

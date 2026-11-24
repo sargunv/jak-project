@@ -1,0 +1,48 @@
+name: Android
+
+on:
+  push:
+    branches:
+      - android
+  pull_request:
+    branches:
+      - android
+  merge_group: {}
+
+# A newer push or PR update cancels the older run
+concurrency:
+  group: android-caller-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: 📝 Lint
+    uses: ./.github/workflows/android-lint.yaml
+
+  build_linux:
+    name: 🐧 Linux
+    uses: ./.github/workflows/linux-build-clang.yaml
+    with:
+      cmakePreset: "Release-linux-clang"
+      cachePrefix: ""
+
+  build_android:
+    name: 🤖 Android
+    uses: ./.github/workflows/android-build.yaml
+
+  # Replaces the floating nightly release with this commit's build
+  nightly:
+    name: 🌙 Nightly
+    if: github.event_name == 'push'
+    needs: [lint, build_linux, build_android]
+    uses: ./.github/workflows/android-nightly.yaml
+    permissions:
+      contents: write
+    secrets:
+      POCKETGOAL_KEYSTORE_BASE64: ${{ secrets.POCKETGOAL_KEYSTORE_BASE64 }}
+      POCKETGOAL_KEYSTORE_PASSWORD: ${{ secrets.POCKETGOAL_KEYSTORE_PASSWORD }}
+      POCKETGOAL_KEY_ALIAS: ${{ secrets.POCKETGOAL_KEY_ALIAS }}
+      POCKETGOAL_KEY_PASSWORD: ${{ secrets.POCKETGOAL_KEY_PASSWORD }}

@@ -288,13 +288,14 @@ the renderer can be finished before any arm64 hardware is involved.
 
 ## Milestone 4: an app for players
 
-- [ ] Name, package and icon. The app shouldn't present itself as OpenGOAL,
-      which doesn't make or endorse it. The icon is upstream's.
+- [x] Name, package and icon: PocketGOAL (`dev.sargunv.pocketgoal`), with its
+      own icon, so it doesn't present itself as OpenGOAL.
 - [ ] More launcher: settings, saves, mods and texture packs. The game list and
       installs are done.
 - [ ] The Thor's second screen: show the map, menus or ImGui there through a
       second SDL window or Android's Presentation API.
-- [ ] Release signing, CI that builds both ABIs and the APK, and a routine for
+- [x] Release signing, CI that lints and builds desktop and the APK, a nightly
+      prerelease that replaces itself, tagged releases, and an agent skill for
       rebasing on upstream.
 - [ ] Web requests for the leaderboards: Android's HTTP client through JNI, or
       libcurl with a TLS library that builds for Android.
