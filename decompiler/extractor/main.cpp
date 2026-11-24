@@ -13,10 +13,58 @@
 
 #include "third-party/CLI11.hpp"
 
+#ifdef __ANDROID__
+#include <regex>
+
+#include "fmt/format.h"
+#endif
+
 // used for - decompiler_out/<jak1> and iso_data/<jak1>
 const std::unordered_map<std::string, std::string> data_subfolders = {{"jak1", "jak1"},
                                                                       {"jak2", "jak2"},
                                                                       {"jak3", "jak3"}};
+
+#ifdef __ANDROID__
+/*!
+ * Prints which game a disc image holds, as "identified-game: <game>", from the name of the game's
+ * executable in the disc's root folder, without extracting the disc. PocketGOAL runs this when
+ * another app, such as a frontend, opens a disc image with it.
+ */
+int identify_disc(const fs::path& path) {
+  const auto [iso_ok, iso_code] = is_iso_file(path);
+  if (!iso_ok) {
+    return static_cast<int>(iso_code);
+  }
+  auto fp = open_disc_image(path);
+  if (!fp) {
+    lg::error("failed to open disc image '{}'", path.string());
+    return static_cast<int>(ExtractorErrorCode::EXTRACTION_INVALID_ISO_PATH);
+  }
+  const auto iso = find_files_in_iso(fp);
+  fclose(fp);
+
+  // Executables are named like SCUS_971.24, for the serial SCUS-97124 (findElfFile)
+  const std::regex elf_name(".{4}_.{3}\\..{2}");
+  for (const auto& entry : iso.root.children) {
+    if (entry.is_dir || !std::regex_match(entry.name, elf_name)) {
+      continue;
+    }
+    const auto serial = fmt::format("{}-{}", entry.name.substr(0, 4),
+                                    entry.name.substr(5, 3) + entry.name.substr(9, 2));
+    const auto& database = extractor_iso_database();
+    const auto versions = database.find(serial);
+    if (versions == database.end() || versions->second.empty()) {
+      lg::error("Serial '{}' not found in the validation database", serial);
+      return static_cast<int>(ExtractorErrorCode::VALIDATION_SERIAL_MISSING_FROM_DB);
+    }
+    // Every version of a serial is the same game
+    fmt::print("identified-game: {}\n", versions->second.begin()->second.game_name);
+    return 0;
+  }
+  lg::error("Unable to locate a Serial/ELF file!");
+  return static_cast<int>(ExtractorErrorCode::VALIDATION_CANT_LOCATE_ELF);
+}
+#endif
 
 IsoFile extract_files(fs::path input_file_path, fs::path extracted_iso_path) {
   lg::info(
@@ -225,9 +273,20 @@ int main(int argc, char** argv) {
   app.add_flag("-f,--folder", flag_folder, "Take ISO input from a folder");
   app.add_option("--instruction-set", instr_set_name,
                  "Select the x86 or ARM64 code generation backend.");
+#ifdef __ANDROID__
+  bool flag_identify = false;
+  app.add_flag("--identify", flag_identify,
+               "Print which game the disc image holds, without extracting it");
+#endif
   define_common_cli_arguments(app);
   app.validate_positionals();
   CLI11_PARSE(app, argc, argv);
+
+#ifdef __ANDROID__
+  if (flag_identify) {
+    return identify_disc(input_file_path);
+  }
+#endif
 
   emitter::InstructionSet instr_set;
   if (instr_set_name == "x86") {

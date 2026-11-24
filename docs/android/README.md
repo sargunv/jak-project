@@ -82,6 +82,19 @@ to the refresh rate that matches the game's frame rate, and vibrates the device
 for controllers without rumble. Call those from the graphics thread: Java can't
 attach the EE thread, which runs on the runtime's own stack.
 
+### Opening a disc from another app
+
+`MainActivity` also takes `ACTION_VIEW` with a `content:` URI to a disc image,
+which is how frontends launch an emulator with a game. `DiscIdentifier` runs the
+extractor with `--identify` (Android builds only), which reads the disc's root
+folder for the game's executable, whose name is the disc's serial, and looks the
+serial up in the extractor's database. If the game is installed and current, the
+launcher starts it and finishes, so leaving the game returns to the frontend.
+Otherwise it installs the game from that disc and starts it when the install
+succeeds. The frontend's read permission is temporary, so the launcher doesn't
+remember that disc for later updates; the frontend gives it again at each
+launch.
+
 ### Graphics
 
 - `mise run shaders:check` compiles every shader for desktop OpenGL and OpenGL

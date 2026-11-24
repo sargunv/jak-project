@@ -23,6 +23,15 @@ Saves and settings are kept.
 Needs Android 9 or later, a 64-bit ARM device with OpenGL ES 3.2, and about
 6 GB of free memory while a game installs. Tested on the AYN Thor.
 
+## Frontends
+
+A frontend can launch a game by opening its disc image with PocketGOAL, as it
+would with an emulator. PocketGOAL finds the game on the disc, installs it from
+that disc if it isn't installed yet, and starts it.
+
+In [Argosy](https://github.com/rommapp/argosy-launcher), open a Jak game's
+settings, change its emulator to "Other app…", and pick PocketGOAL.
+
 ## Development
 
 The `android` branch is OpenGOAL's `master` plus the port. See

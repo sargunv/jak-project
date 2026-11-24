@@ -300,6 +300,12 @@ the renderer can be finished before any arm64 hardware is involved.
 - [x] Updates: an F-Droid repo of the releases on GitHub Pages, and an Obtainium
       link. After an update that changes how a game's data is made, the launcher
       asks to install the game again, from the disc image picked last time.
+- [x] Frontends: opening a disc image with the app (`ACTION_VIEW`), as Argosy
+      does with an emulator, identifies the game, installs it from that disc if
+      needed, and plays it.
+- [ ] Frontend save sync: saves in storage that a frontend can reach, and
+      PocketGOAL in Argosy's list of emulators, so Argosy syncs Jak saves with
+      RomM ([#1](https://github.com/sargunv/jak-project/issues/1)).
 - [ ] Web requests for the leaderboards: Android's HTTP client through JNI, or
       libcurl with a TLS library that builds for Android.
 

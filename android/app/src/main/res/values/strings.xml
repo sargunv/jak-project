@@ -15,6 +15,7 @@
   <string name="game_not_installed">Install from a disc image</string>
   <string name="game_install_failed">Couldn\'t install</string>
   <string name="game_menu">More options</string>
+  <string name="open_unknown_disc">Not a disc image of a game PocketGOAL plays.</string>
 
   <string name="game_reinstall">Install again</string>
   <string name="game_delete">Delete</string>

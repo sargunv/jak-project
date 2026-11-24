@@ -37,6 +37,15 @@
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
+      <!-- A disc image that another app, such as a frontend, opens to play its game -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <data android:scheme="content" />
+        <data android:mimeType="application/octet-stream" />
+        <data android:mimeType="application/x-iso9660-image" />
+        <data android:mimeType="application/x-cd-image" />
+      </intent-filter>
     </activity>
 
     <!-- In its own process, since the runtime starts once per process. Exported for adb, which
