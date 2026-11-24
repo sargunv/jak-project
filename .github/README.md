@@ -1,23 +1,20 @@
 # PocketGOAL
 
-The [OpenGOAL](https://opengoal.dev) ports of the Jak and Daxter trilogy, on Android handhelds and
-phones. Install the app, pick your own disc image (ISO or CHD), and it builds the game on the
-device.
+An Android build of [OpenGOAL](https://opengoal.dev), the PC port of Jak and
+Daxter, Jak II and Jak 3. Bring your own disc images (ISO or CHD); the app
+installs each game from its image on the device.
 
-PocketGOAL isn't made or endorsed by the OpenGOAL team. Everything that makes the games run is
-theirs: see [open-goal/jak-project](https://github.com/open-goal/jak-project) for the project, and
-report bugs here, not there.
+Not affiliated with the OpenGOAL project. Report issues here, not upstream.
 
-## Install
+## Download
 
-Download the APK from [Releases](https://github.com/sargunv/jak-project/releases): the latest
-version, or `nightly` for the latest build. [Obtainium](https://obtainium.imranr.dev) can keep it
-updated.
+Get the APK from [Releases](https://github.com/sargunv/jak-project/releases).
+`nightly` is the latest build of the `android` branch.
 
-You need Android 9 or later on a 64-bit ARM device with OpenGL ES 3.2, and your own copy of the game.
-Installing Jak II or Jak 3 takes about 5 minutes and 5 GB of memory; it's been tested on an AYN Thor.
+Needs Android 9 or later, a 64-bit ARM device with OpenGL ES 3.2, and about
+6 GB of free memory while a game installs. Tested on the AYN Thor.
 
-## Develop
+## Development
 
-This branch is upstream's `master` with the port on top. [docs/android](../docs/android/README.md)
-covers building and the [roadmap](../docs/android/ROADMAP.md).
+The `android` branch is OpenGOAL's `master` plus the port. See
+[docs/android](../docs/android/README.md).

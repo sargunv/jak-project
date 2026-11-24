@@ -2,8 +2,9 @@ name: Android Release
 
 on:
   push:
+    # pocketgoal-v1.2.3. Upstream's own v1.2.3 tags come with each upstream merge.
     tags:
-      - "v*"
+      - "pocketgoal-v*"
 
 concurrency:
   group: android-release-publish
@@ -13,12 +14,25 @@ permissions:
   contents: read
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: echo "version=${TAG#pocketgoal-v}" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build
+    needs: version
     uses: ./.github/workflows/android-build.yaml
     with:
       release: true
-      versionName: ${{ github.ref_name }}
+      version: ${{ needs.version.outputs.version }}
     secrets:
       POCKETGOAL_KEYSTORE_BASE64: ${{ secrets.POCKETGOAL_KEYSTORE_BASE64 }}
       POCKETGOAL_KEYSTORE_PASSWORD: ${{ secrets.POCKETGOAL_KEYSTORE_PASSWORD }}
@@ -27,7 +41,7 @@ jobs:
 
   publish:
     name: Publish
-    needs: build
+    needs: [version, build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -43,8 +57,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          gh release create "$TAG" "PocketGOAL-$TAG.apk" \
+          gh release create "$TAG" "PocketGOAL-$VERSION.apk" \
             --verify-tag \
             --generate-notes \
-            --title "PocketGOAL $TAG"
+            --title "PocketGOAL $VERSION"

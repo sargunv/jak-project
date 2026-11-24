@@ -2,8 +2,8 @@
 
 PocketGOAL, an Android build of the OpenGOAL runtime, kept in this fork.
 Upstream OpenGOAL doesn't accept Android contributions, so this work stays on
-the `android` branch and gets rebased on upstream `master`
-([`.claude/skills/upstream-rebase`](../../.claude/skills/upstream-rebase/SKILL.md)).
+the `android` branch, which merges upstream `master`
+([`.claude/skills/upstream-merge`](../../.claude/skills/upstream-merge/SKILL.md)).
 
 The app builds for `arm64-v8a` (the target, such as Snapdragon handhelds) and
 `x86_64` (emulators and [Innkeeper](https://github.com/sargunv/innkeeper) on a
@@ -151,10 +151,13 @@ more than one device is connected.
 
 CI (`.github/workflows/android.yaml`) lints, builds desktop and runs its tests,
 and builds the APK on every push and PR to `android`. Each push to `android`
-then replaces the `nightly` prerelease with a signed build. Pushing a `v1.2.3`
-tag publishes release 1.2.3 (`android-release.yaml`).
+then replaces the `nightly` prerelease with a signed build. A
+`pocketgoal-v1.2.3` tag publishes release 1.2.3 (`android-release.yaml`); the
+prefix keeps clear of upstream's own `v1.2.3` tags.
 
-The version code is the branch's commit count, so every build installs over the
+The version name carries the upstream release it's based on, as SemVer build
+metadata: `1.2.3+opengoal.0.3.9`, or `nightly-<commit>+opengoal.0.3.9`. The
+version code is the branch's commit count, so every build installs over the
 last. Release builds sign with the release key in the repository's Actions
 secrets (`POCKETGOAL_KEYSTORE_BASE64` and its passwords), and with the debug key
 when built locally.
@@ -166,4 +169,4 @@ when built locally.
   `iso_data/<game>/.gitignore` when it extracts again, so restore it with
   `git checkout -- iso_data`.
 - Keep Android changes behind `ANDROID`, `__ANDROID__` or `OG_GLES`, so the
-  desktop build stays the same and rebases on upstream stay small.
+  desktop build stays the same and merges from upstream stay small.

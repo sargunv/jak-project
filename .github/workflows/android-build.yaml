@@ -8,7 +8,8 @@ on:
         required: false
         type: boolean
         default: false
-      versionName:
+      version:
+        description: "The release's version, such as 1.2.3, or nightly"
         required: false
         type: string
         default: "0.0.0-dev"
@@ -31,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      # The whole history, for the commit count that versions the build
+      # The whole history and tags, for the commit count and the upstream version
       - name: Checkout Repository
         uses: actions/checkout@v7
         with:
@@ -76,22 +77,25 @@ jobs:
         working-directory: android
         env:
           POCKETGOAL_COMPILER_LAUNCHER: sccache
-          VERSION_NAME: ${{ inputs.versionName }}
+          VERSION: ${{ inputs.version }}
           POCKETGOAL_KEYSTORE_PASSWORD: ${{ secrets.POCKETGOAL_KEYSTORE_PASSWORD }}
           POCKETGOAL_KEY_ALIAS: ${{ secrets.POCKETGOAL_KEY_ALIAS }}
           POCKETGOAL_KEY_PASSWORD: ${{ secrets.POCKETGOAL_KEY_PASSWORD }}
         run: |
-          # v1.2.3 tags make version 1.2.3
-          export POCKETGOAL_VERSION_NAME="${VERSION_NAME#v}"
+          # The upstream release this is based on, such as 0.3.9, as SemVer build metadata
+          upstream=$(git describe --tags --abbrev=0 --match 'v[0-9]*')
+          if [ "$VERSION" = nightly ]; then VERSION="nightly-$(git rev-parse --short HEAD)"; fi
+          export POCKETGOAL_VERSION_NAME="$VERSION+opengoal.${upstream#v}"
           export POCKETGOAL_VERSION_CODE=$(git rev-list --count HEAD)
+          echo "Version $POCKETGOAL_VERSION_NAME ($POCKETGOAL_VERSION_CODE)"
           ./gradlew --no-configuration-cache --stacktrace testDebugUnitTest ${{ inputs.release && 'assembleRelease' || 'assembleDebug' }}
 
       - name: Name APK
         env:
-          VERSION_NAME: ${{ inputs.versionName }}
+          VERSION: ${{ inputs.version }}
         run: |
           mkdir dist
-          cp android/app/build/outputs/apk/*/app-*.apk "dist/PocketGOAL-$VERSION_NAME.apk"
+          cp android/app/build/outputs/apk/*/app-*.apk "dist/PocketGOAL-$VERSION.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v7

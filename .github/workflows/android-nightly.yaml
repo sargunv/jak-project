@@ -27,7 +27,7 @@ jobs:
     uses: ./.github/workflows/android-build.yaml
     with:
       release: true
-      versionName: nightly
+      version: nightly
     secrets:
       POCKETGOAL_KEYSTORE_BASE64: ${{ secrets.POCKETGOAL_KEYSTORE_BASE64 }}
       POCKETGOAL_KEYSTORE_PASSWORD: ${{ secrets.POCKETGOAL_KEYSTORE_PASSWORD }}
