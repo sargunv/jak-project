@@ -13,7 +13,8 @@ Get the APK from [Releases](https://github.com/sargunv/jak-project/releases).
 
 To get updates to releases:
 
-- F-Droid client: add the repo `https://code.sargunv.dev/jak-project/repo`.
+- F-Droid client: add the repo
+  `https://code.sargunv.dev/jak-project/repo?fingerprint=633fb7689877e8d61f0df2b817b30ae49490a89991c3ce6f7991384a5fe7dcd4`.
 - Obtainium: [add PocketGOAL](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22dev.sargunv.pocketgoal%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsargunv%2Fjak-project%22%2C%22author%22%3A%22sargunv%22%2C%22name%22%3A%22PocketGOAL%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22releaseTitleAsVersion%5C%22%3Atrue%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5EPocketGOAL-.%2A%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22trackOnly%5C%22%3Afalse%7D%22%2C%22overrideSource%22%3Anull%7D).
 
 After an update, the app may ask to install a game again from its disc image.
