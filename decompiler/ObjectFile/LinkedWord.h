@@ -18,12 +18,19 @@
 
 #include <cstdint>
 #include <cstring>
+#include <mutex>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "common/common_types.h"
 #include "common/util/Assert.h"
 
 namespace decompiler {
+/*!
+ * A word and its kind in 8 bytes: there's one for every word of every object file, which adds up to
+ * gigabytes for the later games. Symbol names are stored once, in a table shared by every word.
+ */
 class LinkedWord {
  public:
   enum Kind : u8 {
@@ -38,94 +45,24 @@ class LinkedWord {
     TYPE_PTR         // this is a pointer to a type
   };
 
- private:
-  uintptr_t m_data_ptr = 0;  // 8 bytes
- public:
   u32 data;
 
- private:
-  Kind m_kind = PLAIN_DATA;
-
- public:
   explicit LinkedWord(uint32_t _data) : data(_data) {}
 
   bool holds_string() const {
-    return m_kind == SYM_PTR || m_kind == SYM_OFFSET || m_kind == TYPE_PTR ||
-           m_kind == SYM_VAL_OFFSET;
+    const auto k = kind();
+    return k == SYM_PTR || k == SYM_OFFSET || k == TYPE_PTR || k == SYM_VAL_OFFSET;
   }
 
-  LinkedWord(const LinkedWord& other) {
-    if (&other != this) {
-      data = other.data;
-      m_kind = other.m_kind;
-      if (holds_string()) {
-        const char* other_str = (const char*)(other.m_data_ptr);
-        char* str = new char[strlen(other_str) + 1];
-        strcpy(str, other_str);
-        m_data_ptr = (uintptr_t)str;
-      } else {
-        m_data_ptr = other.m_data_ptr;
-      }
-    }
-  }
-
-  LinkedWord& operator=(const LinkedWord& other) {
-    if (&other != this) {
-      data = other.data;
-      if (holds_string()) {
-        delete[]((char*)m_data_ptr);
-      }
-      m_kind = other.m_kind;
-
-      if (holds_string()) {
-        const char* other_str = (const char*)(other.m_data_ptr);
-        char* str = new char[strlen(other_str) + 1];
-        strcpy(str, other_str);
-        m_data_ptr = (uintptr_t)str;
-      } else {
-        m_data_ptr = other.m_data_ptr;
-      }
-    }
-    return *this;
-  }
-
-  ~LinkedWord() {
-    if (holds_string()) {
-      delete[]((char*)m_data_ptr);
-    }
-  }
-
-  void set_to_empty_ptr() {
-    if (holds_string()) {
-      delete[]((char*)m_data_ptr);
-    }
-    m_kind = EMPTY_PTR;
-  }
+  void set_to_empty_ptr() { m_kind_and_value = pack(EMPTY_PTR, 0); }
 
   void set_to_symbol(Kind kind, const std::string& name) {
-    if (holds_string()) {
-      delete[]((char*)m_data_ptr);
-    }
-    m_kind = kind;
-    char* str = new char[name.size() + 1];
-    strcpy(str, name.c_str());
-    m_data_ptr = (uintptr_t)str;
+    m_kind_and_value = pack(kind, symbol_index(name));
   }
 
-  void set_to_pointer(Kind kind, u32 label_id) {
-    if (holds_string()) {
-      delete[]((char*)m_data_ptr);
-    }
-    m_data_ptr = label_id;
-    m_kind = kind;
-  }
+  void set_to_pointer(Kind kind, u32 label_id) { m_kind_and_value = pack(kind, label_id); }
 
-  void set_to_plain_data() {
-    if (holds_string()) {
-      delete[]((char*)m_data_ptr);
-    }
-    m_kind = PLAIN_DATA;
-  }
+  void set_to_plain_data() { m_kind_and_value = pack(PLAIN_DATA, 0); }
 
   u8 get_byte(int idx) const {
     ASSERT(kind() == PLAIN_DATA);
@@ -145,24 +82,54 @@ class LinkedWord {
   }
 
   // kind, label_id, symbol_name
-  Kind kind() const { return m_kind; }
+  Kind kind() const { return (Kind)(m_kind_and_value >> kValueBits); }
 
   u32 label_id() const {
-    ASSERT(m_kind == PTR || m_kind == LO_PTR || m_kind == HI_PTR);
-    return m_data_ptr;
+    ASSERT(kind() == PTR || kind() == LO_PTR || kind() == HI_PTR);
+    return m_kind_and_value & kValueMask;
   }
 
   std::string symbol_name() const {
     ASSERT(holds_string());
-    return (const char*)(m_data_ptr);
+    auto& table = symbol_table();
+    std::lock_guard<std::mutex> lock(table.mutex);
+    return table.names.at(m_kind_and_value & kValueMask);
   }
 
  private:
-  // if plain data, this is empty.
-  // otherwise:
-  //  u8 (kind)
-  //  u32 label id | actual string.
+  // The kind in the top 4 bits, and a label id or an index into the symbol table below them.
+  static constexpr int kValueBits = 28;
+  static constexpr u32 kValueMask = (1u << kValueBits) - 1;
+  u32 m_kind_and_value = 0;
+
+  static u32 pack(Kind kind, u32 value) {
+    ASSERT(value <= kValueMask);
+    return ((u32)kind << kValueBits) | value;
+  }
+
+  struct SymbolTable {
+    std::mutex mutex;
+    std::vector<std::string> names;
+    std::unordered_map<std::string, u32> indices;
+  };
+
+  static SymbolTable& symbol_table() {
+    static SymbolTable table;
+    return table;
+  }
+
+  static u32 symbol_index(const std::string& name) {
+    auto& table = symbol_table();
+    std::lock_guard<std::mutex> lock(table.mutex);
+    const auto [it, added] = table.indices.try_emplace(name, (u32)table.names.size());
+    if (added) {
+      table.names.push_back(name);
+    }
+    return it->second;
+  }
 };
+
+static_assert(sizeof(LinkedWord) == 8);
 
 }  // namespace decompiler
 
