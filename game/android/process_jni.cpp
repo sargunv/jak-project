@@ -49,7 +49,7 @@ void throw_errno(JNIEnv* env, const char* what) {
 
 /*!
  * Runs argv[0] with argv and envp in the folder cwd. The child's file descriptor 3 is a copy of
- * fileFd, and its stdout and stderr both go to one pipe. Returns the child's pid and the pipe's
+ * fileFd, unless that's -1, and its stdout and stderr both go to one pipe. Returns the child's pid and the pipe's
  * read end, which the caller owns.
  */
 extern "C" JNIEXPORT jintArray JNICALL
@@ -85,7 +85,7 @@ Java_dev_sargunv_opengoal_NativeProcess_spawn(JNIEnv* env,
     // dup2 clears close-on-exec on the copy, unless the copy is the same descriptor
     if (file_fd == 3) {
       fcntl(3, F_SETFD, 0);
-    } else if (dup2(file_fd, 3) < 0) {
+    } else if (file_fd >= 0 && dup2(file_fd, 3) < 0) {
       _exit(126);
     }
     if (dup2(output[1], STDOUT_FILENO) < 0 || dup2(output[1], STDERR_FILENO) < 0 ||

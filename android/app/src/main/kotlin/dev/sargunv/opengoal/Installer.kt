@@ -134,33 +134,55 @@ internal class Installer(
 
   private class ExtractorStatus(val exitStatus: Int, val lastError: String?)
 
+  /**
+   * Runs the extractor twice: to extract and decompile, then to compile. The compiler would
+   * otherwise start on top of the memory the decompiler grew to, which took Jak 3's install from 5
+   * to 5.8 GB.
+   */
   private fun extract(iso: ParcelFileDescriptor, isoBytes: Long, workDir: File): ExtractorStatus {
-    val extractor = File(context.applicationInfo.nativeLibraryDir, "libextractor.so")
-    val argv =
-      arrayOf(
-        extractor.path,
+    val parser = InstallLogParser(isoBytes, onProgress)
+    val decompiled =
+      runExtractor(
+        workDir,
+        parser,
+        iso.fd,
         // The ISO, as the descriptor that the child inherits (FileUtil's open_file)
         "/proc/self/fd/3",
-        "--game",
-        game.id,
         "--extract",
         "--validate",
         "--decompile",
-        "--compile",
-        "--proj-path",
-        workDir.path,
         // A thread per level took Jak II to 7 GB, and Android stopped the install even with 16 GB.
         // Four peak at 5.4 GB.
         "--decomp-config-override",
         """{"level_extract_threads": 4}""",
-        "--disable-ansi",
       )
+    if (decompiled.exitStatus != 0 || cancelled) return decompiled
+    return runExtractor(
+      workDir,
+      parser,
+      -1,
+      workDir.resolve("iso_data/${game.id}").path,
+      "--folder",
+      "--compile",
+    )
+  }
+
+  private fun runExtractor(
+    workDir: File,
+    parser: InstallLogParser,
+    fileFd: Int,
+    vararg args: String,
+  ): ExtractorStatus {
+    val extractor = File(context.applicationInfo.nativeLibraryDir, "libextractor.so")
+    val argv =
+      arrayOf(extractor.path) +
+        args +
+        arrayOf("--game", game.id, "--proj-path", workDir.path, "--disable-ansi")
     val envp = arrayOf("HOME=${workDir.path}", "TMPDIR=${context.cacheDir.path}")
-    val (childPid, output) = NativeProcess.spawn(argv, envp, workDir.path, iso.fd)
+    val (childPid, output) = NativeProcess.spawn(argv, envp, workDir.path, fileFd)
     pid = childPid
     if (cancelled) cancel()
 
-    val parser = InstallLogParser(isoBytes, onProgress)
     ParcelFileDescriptor.AutoCloseInputStream(ParcelFileDescriptor.adoptFd(output))
       .bufferedReader()
       .useLines { lines ->

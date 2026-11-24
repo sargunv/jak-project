@@ -7,9 +7,9 @@ internal object NativeProcess {
   }
 
   /**
-   * Runs `argv[0]` in [cwd], with [fileFd] open as the child's file descriptor 3. Returns the
-   * child's pid and the read end of a pipe that carries its stdout and stderr, which the caller
-   * owns.
+   * Runs `argv[0]` in [cwd], with [fileFd], unless it's -1, open as the child's file descriptor 3.
+   * Returns the child's pid and the read end of a pipe that carries its stdout and stderr, which
+   * the caller owns.
    */
   @JvmStatic
   external fun spawn(argv: Array<String>, envp: Array<String>, cwd: String, fileFd: Int): IntArray
