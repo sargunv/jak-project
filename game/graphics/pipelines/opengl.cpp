@@ -54,6 +54,13 @@
 #include "game/android/activity.h"
 #endif
 
+// The OpenGL version the renderer needs, for error messages
+#ifdef OG_GLES
+#define REQUIRED_GL "OpenGL ES 3.2"
+#else
+#define REQUIRED_GL "OpenGL 4.3"
+#endif
+
 constexpr bool run_dma_copy = false;
 
 constexpr PerGameVersion<int> fr3_level_count(jak1::LEVEL_TOTAL,
@@ -226,7 +233,8 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
     sdl_util::log_error("gl_make_display failed - Could not create display window");
     dialogs::create_error_message_dialog(
         "Critical Error Encountered",
-        "Unable to create OpenGL window.\nOpenGOAL requires OpenGL 4.3.\nEnsure your GPU "
+        "Unable to create OpenGL window.\nOpenGOAL requires " REQUIRED_GL
+        ".\nEnsure your GPU "
         "supports this and your drivers are up to date.");
     return NULL;
   }
@@ -239,7 +247,8 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
     sdl_util::log_error("gl_make_display failed - Could not create OpenGL Context");
     dialogs::create_error_message_dialog(
         "Critical Error Encountered",
-        "Unable to create OpenGL context.\nOpenGOAL requires OpenGL 4.3.\nEnsure your GPU "
+        "Unable to create OpenGL context.\nOpenGOAL requires " REQUIRED_GL
+        ".\nEnsure your GPU "
         "supports this and your drivers are up to date.");
     return NULL;
   }
@@ -250,7 +259,8 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
       sdl_util::log_error("gl_make_display failed - Could not associated context with window");
       dialogs::create_error_message_dialog("Critical Error Encountered",
                                            "Unable to create OpenGL window with context.\nOpenGOAL "
-                                           "requires OpenGL 4.3.\nEnsure your GPU "
+                                           "requires " REQUIRED_GL
+                                           ".\nEnsure your GPU "
                                            "supports this and your drivers are up to date.");
       return NULL;
     }
@@ -266,10 +276,11 @@ static std::shared_ptr<GfxDisplay> gl_make_display(int width,
       if (!gladLoadGL()) {
 #endif
         lg::error("GL init fail");
-        dialogs::create_error_message_dialog("Critical Error Encountered",
-                                             "Unable to initialize OpenGL API.\nOpenGOAL requires "
-                                             "OpenGL 4.3.\nEnsure your GPU "
-                                             "supports this and your drivers are up to date.");
+        dialogs::create_error_message_dialog(
+            "Critical Error Encountered",
+            "Unable to initialize OpenGL API.\nOpenGOAL requires " REQUIRED_GL
+            ".\nEnsure your GPU "
+            "supports this and your drivers are up to date.");
         return NULL;
       }
     }
