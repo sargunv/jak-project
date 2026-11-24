@@ -18,6 +18,8 @@ lockfile_mode = "merge"
 "conda:spirv-tools" = "2026.4"
 "core:java" = "zulu-25.38.201.0"
 "core:python" = "3.14.10"
+# The version upstream's CI checks C++ formatting with (.github/workflows/linting.yaml)
+"pipx:clang-format" = "18.1.8"
 
 [env]
 ANDROID_HOME = "{{ env.ANDROID_HOME | default(value=env.HOME ~ '/Android/Sdk') }}"

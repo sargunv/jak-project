@@ -49,16 +49,16 @@ void throw_errno(JNIEnv* env, const char* what) {
 
 /*!
  * Runs argv[0] with argv and envp in the folder cwd. The child's file descriptor 3 is a copy of
- * fileFd, unless that's -1, and its stdout and stderr both go to one pipe. Returns the child's pid and the pipe's
- * read end, which the caller owns.
+ * fileFd, unless that's -1, and its stdout and stderr both go to one pipe. Returns the child's pid
+ * and the pipe's read end, which the caller owns.
  */
 extern "C" JNIEXPORT jintArray JNICALL
 Java_dev_sargunv_pocketgoal_NativeProcess_spawn(JNIEnv* env,
-                                              jclass,
-                                              jobjectArray argv_array,
-                                              jobjectArray envp_array,
-                                              jstring cwd_string,
-                                              jint file_fd) {
+                                                jclass,
+                                                jobjectArray argv_array,
+                                                jobjectArray envp_array,
+                                                jstring cwd_string,
+                                                jint file_fd) {
   auto args = to_strings(env, argv_array);
   auto envs = to_strings(env, envp_array);
   const char* cwd_chars = env->GetStringUTFChars(cwd_string, nullptr);
@@ -112,8 +112,8 @@ Java_dev_sargunv_pocketgoal_NativeProcess_spawn(JNIEnv* env,
  * shells do.
  */
 extern "C" JNIEXPORT jint JNICALL Java_dev_sargunv_pocketgoal_NativeProcess_waitFor(JNIEnv* env,
-                                                                                  jclass,
-                                                                                  jint pid) {
+                                                                                    jclass,
+                                                                                    jint pid) {
   int status = 0;
   while (waitpid(pid, &status, 0) < 0) {
     if (errno != EINTR) {

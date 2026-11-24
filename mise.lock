@@ -112,7 +112,10 @@ provenance = "github-attestations"
 [[tools."aqua:astral-sh/uv"]]
 version = "0.13.9"
 backend = "aqua:astral-sh/uv"
-specifiers = ["latest"]
+specifiers = [
+    "0.13.9",
+    "latest",
+]
 
 [tools."aqua:astral-sh/uv"."platforms.linux-x64"]
 checksum = "sha256:a7fbaff2b9a271d85c1bdb540941090fd1ce011797b4abeb48e4dcd39c2471d5"
@@ -425,6 +428,12 @@ url = "https://cdn.azul.com/zulu/bin/zulu25.38.201-ca-jdk25.0.5.1-win_aarch64.zi
 [tools.java."platforms.windows-x64"]
 checksum = "sha256:01c1c4cfe8c0e04a22a46d3cd1ddd18b9db9fb2a1b0a88ffd90e0aa57420845e"
 url = "https://cdn.azul.com/zulu/bin/zulu25.38.201-ca-jdk25.0.5.1-win_x64.zip"
+
+[[tools."pipx:clang-format"]]
+version = "18.1.8"
+backend = "pipx:clang-format"
+specifiers = ["18.1.8"]
+uv = { path = ".mise/locks/pipx-clang-format/18.1.8", digest = "sha256:3c33fff5bb00afe136d54435776f268be84950f0bb33f64a2ddb1d1c235cfdef" }
 
 [[tools.python]]
 version = "3.14.10"
