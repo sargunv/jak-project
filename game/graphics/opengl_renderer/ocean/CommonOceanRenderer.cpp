@@ -340,6 +340,11 @@ void CommonOceanRenderer::flush_near(SharedRenderState* render_state, ScopedProf
             glGetUniformLocation(render_state->shaders[ShaderId::OCEAN_COMMON].id(), "bucket"), 2);
         break;
     }
+    // A bucket with nothing in it this frame. Drawing it does nothing, but some drivers, such as
+    // Adreno's, report every draw of fewer than 3 vertices as an error.
+    if (m_next_free_index[bucket] < 3) {
+      continue;
+    }
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ogl.index_buffer[bucket]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_next_free_index[bucket] * sizeof(u32),
                  m_indices[bucket].data(), GL_STREAM_DRAW);
@@ -528,6 +533,11 @@ void CommonOceanRenderer::flush_mid(SharedRenderState* render_state, ScopedProfi
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         break;
+    }
+    // A bucket with nothing in it this frame. Drawing it does nothing, but some drivers, such as
+    // Adreno's, report every draw of fewer than 3 vertices as an error.
+    if (m_next_free_index[bucket] < 3) {
+      continue;
     }
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ogl.index_buffer[bucket]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_next_free_index[bucket] * sizeof(u32),
