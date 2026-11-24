@@ -707,7 +707,8 @@ This gives us more freedom to write code how we want.
           ))
       :on-confirm (lambda ((index int) (the-progress progress))
         (pc-set-display-id! index))
-      :should-disable? (lambda () (or (= (pc-get-display-mode) 'windowed) (<= (pc-get-display-count) 1))))
+      ;; on android, the game always fills the screen
+      :should-disable? (lambda () (or (= (pc-get-display-mode) 'windowed) (<= (pc-get-display-count) 1) (= (-> *pc-settings* os) 'android))))
     (new 'static 'menu-generic-carousel-option
       :name (text-id progress-display-mode)
       :items (new 'static 'boxed-array :type text-id
@@ -723,7 +724,8 @@ This gives us more freedom to write code how we want.
         (case index
           ((0) (pc-set-display-mode! 'windowed (-> *pc-settings* window-width) (-> *pc-settings* window-height)))
           ((1) (pc-set-display-mode! 'fullscreen 0 0))
-          ((2) (pc-set-display-mode! 'borderless 0 0)))))
+          ((2) (pc-set-display-mode! 'borderless 0 0))))
+      :should-disable? (lambda () (= (-> *pc-settings* os) 'android)))
     (new 'static 'menu-generic-carousel-option
       :name (text-id progress-graphics-aspect-ratio)
       :items (new 'static 'boxed-array :type text-id
