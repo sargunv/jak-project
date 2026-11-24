@@ -2765,7 +2765,8 @@ int update_opengl_noise_texture(GLuint texture,
                                 int random_index_in) {
   int ret = make_noise_texture(temp, random_table, dim, random_index_in);
   glBindTexture(GL_TEXTURE_2D, texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, dim, dim, 0, GL_RED, GL_UNSIGNED_BYTE, temp);
+  // GL_R8 rather than GL_RED: OpenGL ES only takes sized formats for one channel.
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, dim, dim, 0, GL_RED, GL_UNSIGNED_BYTE, temp);
   glGenerateMipmap(GL_TEXTURE_2D);
   return ret;
 }
