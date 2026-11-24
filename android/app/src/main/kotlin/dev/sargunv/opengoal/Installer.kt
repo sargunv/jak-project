@@ -84,8 +84,7 @@ internal class Installer(
       if (cancelled) return InstallResult.Cancelled
 
       val status =
-        context.contentResolver.openFileDescriptor(iso, "r").use { file ->
-          requireNotNull(file) { "no file for $iso" }
+        openIso().use { file ->
           val header = ByteArray(48)
           val headerBytes = runCatching { Os.pread(file.fileDescriptor, header, 0, header.size, 0) }
           val isoBytes = discImageBytes(header.copyOf(headerBytes.getOrDefault(0)), file.statSize)
@@ -112,6 +111,19 @@ internal class Installer(
     } finally {
       workDir.deleteRecursively()
     }
+  }
+
+  /**
+   * Opens the ISO as a plain copy of the descriptor the provider gave. While the provider's own
+   * descriptor is open, Android ties the app to the provider's process, and kills the app if that
+   * process dies, which it did under the install's memory pressure.
+   */
+  private fun openIso(): ParcelFileDescriptor {
+    val file =
+      requireNotNull(context.contentResolver.openFileDescriptor(iso, "r")) {
+        "no file for $iso"
+      }
+    return file.use { it.dup() }
   }
 
   /** Stops a running install. [run] returns [InstallResult.Cancelled]. */
