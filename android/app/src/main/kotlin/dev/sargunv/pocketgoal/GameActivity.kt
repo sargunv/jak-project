@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal
+package dev.sargunv.pocketgoal
 
 import android.content.pm.ApplicationInfo
 import android.media.AudioAttributes
@@ -28,7 +28,7 @@ import org.libsdl.app.SDLActivity
  * The launcher starts it with the game to play. Debug builds also take the game's arguments, the
  * runtime's options and environment variables, for development:
  * ```
- * adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game jak1 --es args "-boot -fakeiso" \
+ * adb shell am start -n dev.sargunv.pocketgoal/.GameActivity --es game jak1 --es args "-boot -fakeiso" \
  *   --es env "OG_SCREENSHOT_FRAMES=600,1200"
  * ```
  */

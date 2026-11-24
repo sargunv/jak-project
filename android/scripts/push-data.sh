@@ -10,7 +10,7 @@
 # storage instead, which the app links its data folder's out/ to (GameActivity.kt).
 set -euo pipefail
 
-package="dev.sargunv.opengoal"
+package="dev.sargunv.pocketgoal"
 game="${1:-jak1}"
 root="$(git rev-parse --show-toplevel)"
 dest="/sdcard/Android/data/$package/files/data/out"

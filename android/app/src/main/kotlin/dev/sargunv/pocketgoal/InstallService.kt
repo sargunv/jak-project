@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal
+package dev.sargunv.pocketgoal
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -176,7 +176,7 @@ class InstallService : Service() {
     private const val NOTIFICATION_PROGRESS = 1
     private const val NOTIFICATION_RESULT = 2
     private const val EXTRA_GAME = "game"
-    private const val ACTION_CANCEL = "dev.sargunv.opengoal.action.CANCEL_INSTALL"
+    private const val ACTION_CANCEL = "dev.sargunv.pocketgoal.action.CANCEL_INSTALL"
 
     fun start(context: Context, game: Game, iso: Uri) {
       context.startForegroundService(

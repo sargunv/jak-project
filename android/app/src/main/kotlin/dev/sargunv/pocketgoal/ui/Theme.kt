@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal.ui
+package dev.sargunv.pocketgoal.ui
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

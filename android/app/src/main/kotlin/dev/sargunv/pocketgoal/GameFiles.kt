@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal
+package dev.sargunv.pocketgoal
 
 import android.content.Context
 import android.content.res.AssetManager

@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal
+package dev.sargunv.pocketgoal
 
 /**
  * Turns the extractor's log into progress. It follows log lines from the extractor's source, which

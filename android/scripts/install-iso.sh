@@ -9,7 +9,7 @@
 # by the app; pick the ISO in the launcher instead.
 set -euo pipefail
 
-package="dev.sargunv.opengoal"
+package="dev.sargunv.pocketgoal"
 game="$1"
 iso="$2"
 dest="/sdcard/Android/data/$package/files/$game.iso"

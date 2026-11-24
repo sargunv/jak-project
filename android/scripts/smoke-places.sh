@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 goalc="$(git rev-parse --show-toplevel)/build/Release/bin/goalc/goalc"
-package=dev.sargunv.opengoal
+package=dev.sargunv.pocketgoal
 mkdir -p "$out"
 adb forward tcp:8132 tcp:8112 >/dev/null
 

@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 
-package dev.sargunv.opengoal.ui
+package dev.sargunv.pocketgoal.ui
 
 import android.text.format.Formatter
 import androidx.compose.animation.core.animateFloatAsState
@@ -49,12 +49,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.sargunv.opengoal.Game
-import dev.sargunv.opengoal.InstallError
-import dev.sargunv.opengoal.InstallProgress
-import dev.sargunv.opengoal.InstallStep
-import dev.sargunv.opengoal.R
-import dev.sargunv.opengoal.label
+import dev.sargunv.pocketgoal.Game
+import dev.sargunv.pocketgoal.InstallError
+import dev.sargunv.pocketgoal.InstallProgress
+import dev.sargunv.pocketgoal.InstallStep
+import dev.sargunv.pocketgoal.R
+import dev.sargunv.pocketgoal.label
 import kotlin.math.roundToInt
 
 /** The games, and for each one: play it, or install it from its ISO. */

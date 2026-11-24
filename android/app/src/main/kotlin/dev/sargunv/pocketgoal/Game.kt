@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal
+package dev.sargunv.pocketgoal
 
 import androidx.annotation.StringRes
 

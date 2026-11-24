@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal
+package dev.sargunv.pocketgoal
 
 /** Child processes that can read a file the app has open (game/android/process_jni.cpp). */
 internal object NativeProcess {

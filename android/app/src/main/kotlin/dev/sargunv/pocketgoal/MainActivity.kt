@@ -1,4 +1,4 @@
-package dev.sargunv.opengoal
+package dev.sargunv.pocketgoal
 
 import android.Manifest
 import android.content.Intent
@@ -21,9 +21,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.sargunv.opengoal.ui.AppTheme
-import dev.sargunv.opengoal.ui.LibraryScreen
-import dev.sargunv.opengoal.ui.LibraryViewModel
+import dev.sargunv.pocketgoal.ui.AppTheme
+import dev.sargunv.pocketgoal.ui.LibraryScreen
+import dev.sargunv.pocketgoal.ui.LibraryViewModel
 import java.io.File
 
 /** The app's launcher: the games, installing them from their ISOs, and playing them. */
@@ -45,8 +45,8 @@ class MainActivity : ComponentActivity() {
    * Debug builds install a game from an ISO path that the app can read, without the file picker,
    * for scripts and for Innkeeper, whose picker is the desktop's (android/scripts/install-iso.sh):
    * ```
-   * adb shell am start -n dev.sargunv.opengoal/.MainActivity --es install_game jak1 \
-   *   --es install_iso /sdcard/Android/data/dev.sargunv.opengoal/files/jak1.iso
+   * adb shell am start -n dev.sargunv.pocketgoal/.MainActivity --es install_game jak1 \
+   *   --es install_iso /sdcard/Android/data/dev.sargunv.pocketgoal/files/jak1.iso
    * ```
    */
   private fun installFromDevIntent() {

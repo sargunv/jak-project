@@ -28,7 +28,7 @@ import time
 
 from PIL import Image, ImageChops, ImageStat
 
-PACKAGE = "dev.sargunv.opengoal"
+PACKAGE = "dev.sargunv.pocketgoal"
 DEVICE_DIR = f"/sdcard/Android/data/{PACKAGE}/files/render-compare"
 GAME_ARGS = ["-boot", "-fakeiso", "-debug"]
 DEVICE_PORT = 8112  # Jak 1's default listener port, used on the device

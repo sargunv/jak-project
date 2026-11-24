@@ -101,8 +101,8 @@ flag "--env <env>" default="" help="Space-separated NAME=value environment varia
 flag "--runtime-args <args>" default="" help="Options for the runtime itself, such as --no-display"
 '''
 run = """
-adb shell am force-stop dev.sargunv.opengoal
-adb shell am start -n dev.sargunv.opengoal/.GameActivity --es game "${usage_game}" --es args "'${usage_args}'" --es env "'${usage_env}'" --es runtime_args "'${usage_runtime_args}'"
+adb shell am force-stop dev.sargunv.pocketgoal
+adb shell am start -n dev.sargunv.pocketgoal/.GameActivity --es game "${usage_game}" --es args "'${usage_args}'" --es env "'${usage_env}'" --es runtime_args "'${usage_runtime_args}'"
 """
 
 [tasks."android:logcat"]

@@ -94,14 +94,14 @@ androidComponents {
 }
 
 android {
-  namespace = "dev.sargunv.opengoal"
+  namespace = "dev.sargunv.pocketgoal"
   // Compose 1.11 and Material 3 1.5 need 37.1 or later
   compileSdk { version = release(37) { minorApiLevel = 2 } }
   // Keep in sync with ANDROID_NDK_VERSION in mise.toml.
   ndkVersion = "30.0.16248370"
 
   defaultConfig {
-    applicationId = "dev.sargunv.opengoal"
+    applicationId = "dev.sargunv.pocketgoal"
     minSdk = 28
     targetSdk = 36
     versionCode = 1

@@ -53,7 +53,7 @@ void throw_errno(JNIEnv* env, const char* what) {
  * read end, which the caller owns.
  */
 extern "C" JNIEXPORT jintArray JNICALL
-Java_dev_sargunv_opengoal_NativeProcess_spawn(JNIEnv* env,
+Java_dev_sargunv_pocketgoal_NativeProcess_spawn(JNIEnv* env,
                                               jclass,
                                               jobjectArray argv_array,
                                               jobjectArray envp_array,
@@ -111,7 +111,7 @@ Java_dev_sargunv_opengoal_NativeProcess_spawn(JNIEnv* env,
  * Waits for the child to exit. Returns its exit status, or 128 plus the signal that killed it, as
  * shells do.
  */
-extern "C" JNIEXPORT jint JNICALL Java_dev_sargunv_opengoal_NativeProcess_waitFor(JNIEnv* env,
+extern "C" JNIEXPORT jint JNICALL Java_dev_sargunv_pocketgoal_NativeProcess_waitFor(JNIEnv* env,
                                                                                   jclass,
                                                                                   jint pid) {
   int status = 0;

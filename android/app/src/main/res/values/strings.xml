@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="app_name">OpenGOAL</string>
+  <string name="app_name">PocketGOAL</string>
 
   <string name="game_jak1">Jak and Daxter: The Precursor Legacy</string>
   <string name="game_jak2">Jak II</string>

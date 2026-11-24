@@ -1,15 +1,15 @@
-package dev.sargunv.opengoal.ui
+package dev.sargunv.pocketgoal.ui
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import dev.sargunv.opengoal.Game
-import dev.sargunv.opengoal.GameFiles
-import dev.sargunv.opengoal.InstallError
-import dev.sargunv.opengoal.InstallProgress
-import dev.sargunv.opengoal.InstallState
-import dev.sargunv.opengoal.Installer
-import dev.sargunv.opengoal.Installs
+import dev.sargunv.pocketgoal.Game
+import dev.sargunv.pocketgoal.GameFiles
+import dev.sargunv.pocketgoal.InstallError
+import dev.sargunv.pocketgoal.InstallProgress
+import dev.sargunv.pocketgoal.InstallState
+import dev.sargunv.pocketgoal.Installer
+import dev.sargunv.pocketgoal.Installs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
