@@ -66,7 +66,7 @@ macro(draco_set_build_definitions)
   unset(LT_AGE)
 
   list(APPEND draco_include_paths "${draco_root}" "${draco_root}/src"
-              "${draco_build}")
+              "${draco_build}" "${draco_build}/draco_generated")
 
   if(DRACO_TRANSCODER_SUPPORTED)
     draco_setup_eigen()

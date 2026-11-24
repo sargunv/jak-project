@@ -17,9 +17,9 @@ if(DRACO_CMAKE_DRACO_OPTIONS_CMAKE_)
 endif() # DRACO_CMAKE_DRACO_OPTIONS_CMAKE_
 set(DRACO_CMAKE_DRACO_OPTIONS_CMAKE_)
 
-set(draco_features_file_name "${draco_src_root}/draco_features.h")
-# Stage the header in the build directory, so that configures of several build directories at once
-# (such as Gradle configuring each Android ABI) don't delete each other's staged file.
+# Generate the header in the build directory, so that configures of several build directories at
+# once (such as Gradle configuring each Android ABI) don't write the same file.
+set(draco_features_file_name "${CMAKE_BINARY_DIR}/draco_generated/draco/draco_features.h")
 set(draco_features_tmp_file_name "${CMAKE_BINARY_DIR}/draco_features.h.new")
 set(draco_features_list)
 
