@@ -62,6 +62,7 @@ import kotlin.math.roundToInt
 fun LibraryScreen(
   games: List<GameItem>,
   onInstall: (Game) -> Unit,
+  onUpdate: (Game) -> Unit,
   onPlay: (Game) -> Unit,
   onCancelInstall: () -> Unit,
   onDelete: (Game) -> Unit,
@@ -71,6 +72,7 @@ fun LibraryScreen(
   val installing = games.any { it.status is GameStatus.Installing }
   var deleting by rememberSaveable { mutableStateOf<Game?>(null) }
   var showingError by rememberSaveable { mutableStateOf<Game?>(null) }
+  var updating by rememberSaveable { mutableStateOf<Game?>(null) }
 
   // Segmented list items are the surface color, on a darker container, as in the system's settings.
   // On wide screens, the list keeps to a readable width in the middle.
@@ -107,7 +109,13 @@ fun LibraryScreen(
             shapes = ListItemDefaults.segmentedShapes(index, games.size),
             canInstall = !installing,
             onInstall = { onInstall(item.game) },
-            onPlay = { onPlay(item.game) },
+            onPlay = {
+              if ((item.status as? GameStatus.Installed)?.needsUpdate == true) {
+                updating = item.game
+              } else {
+                onPlay(item.game)
+              }
+            },
             onCancelInstall = onCancelInstall,
             onDelete = { deleting = item.game },
             onShowError = { showingError = item.game },
@@ -123,6 +131,18 @@ fun LibraryScreen(
         }
       }
     }
+  }
+
+  updating?.let { game ->
+    UpdateDialog(
+      game = game,
+      canUpdate = !installing,
+      onConfirm = {
+        updating = null
+        onUpdate(game)
+      },
+      onDismiss = { updating = null },
+    )
   }
 
   games
@@ -176,12 +196,15 @@ private fun GameListItem(
         onClick = onPlay,
         shapes = shapes,
         supportingContent = {
-          Text(
-            stringResource(
-              R.string.game_installed,
-              Formatter.formatShortFileSize(LocalContext.current, status.bytes),
-            ),
-          )
+          val size = Formatter.formatShortFileSize(LocalContext.current, status.bytes)
+          if (status.needsUpdate) {
+            Text(
+              stringResource(R.string.game_needs_update, size),
+              color = MaterialTheme.colorScheme.primary,
+            )
+          } else {
+            Text(stringResource(R.string.game_installed, size))
+          }
         },
         trailingContent = {
           GameMenu(canInstall = canInstall, onReinstall = onInstall, onDelete = onDelete)
@@ -274,6 +297,28 @@ private fun GameMenu(canInstall: Boolean, onReinstall: () -> Unit, onDelete: () 
 }
 
 @Composable
+private fun UpdateDialog(
+  game: Game,
+  canUpdate: Boolean,
+  onConfirm: () -> Unit,
+  onDismiss: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(R.string.update_title, stringResource(game.title))) },
+    text = { Text(stringResource(R.string.update_text)) },
+    confirmButton = {
+      TextButton(onClick = onConfirm, enabled = canUpdate) {
+        Text(stringResource(R.string.update_confirm))
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
+    },
+  )
+}
+
+@Composable
 private fun DeleteDialog(item: GameItem, onConfirm: () -> Unit, onDismiss: () -> Unit) {
   AlertDialog(
     onDismissRequest = onDismiss,
@@ -348,6 +393,7 @@ private fun LibraryScreenPreview() {
           GameItem(Game.Jak3, GameStatus.NotInstalled),
         ),
       onInstall = {},
+      onUpdate = {},
       onPlay = {},
       onCancelInstall = {},
       onDelete = {},

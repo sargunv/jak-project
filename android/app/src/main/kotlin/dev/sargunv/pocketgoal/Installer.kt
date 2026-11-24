@@ -107,6 +107,7 @@ internal class Installer(
       dest.mkdirs()
       // What the runtime reads: the files it loads as the game's disc, and the converted levels
       for (name in listOf("iso", "fr3")) move(built.resolve(name), dest.resolve(name))
+      GameFiles.markDataCurrent(context, game)
       return InstallResult.Success
     } finally {
       workDir.deleteRecursively()

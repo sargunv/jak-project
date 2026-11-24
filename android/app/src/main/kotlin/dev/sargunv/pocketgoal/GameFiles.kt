@@ -19,6 +19,8 @@ internal object GameFiles {
   private const val RUNTIME_LIST = "game-files.txt"
   private const val BUILD_LIST = "build-files.txt"
   private const val VERSION_FILE = ".game-files-version"
+  private const val DATA_VERSIONS = "data-versions.txt"
+  private const val DATA_VERSION_FILE = ".data-version"
 
   /** The runtime's data folder, which it gets as `--proj-path`. */
   fun dataDir(context: Context): File = context.filesDir.resolve("data")
@@ -30,6 +32,35 @@ internal object GameFiles {
   fun isInstalled(context: Context, game: Game): Boolean {
     val dir = gameDir(context, game)
     return dir.resolve("fr3").isDirectory && !dir.resolve("iso").list().isNullOrEmpty()
+  }
+
+  /**
+   * The version of [game]'s data that this build of the app makes: a hash of what the data comes
+   * from (the stageGameFiles task). Data from another version may not run.
+   */
+  fun dataVersion(context: Context, game: Game): String? =
+    context.assets
+      .open(DATA_VERSIONS)
+      .bufferedReader()
+      .readLines()
+      .map { it.split(' ', limit = 2) }
+      .firstOrNull { it.size == 2 && it[0] == game.id }
+      ?.get(1)
+
+  /** Records that [game]'s installed data is this build's version. */
+  fun markDataCurrent(context: Context, game: Game) {
+    dataVersion(context, game)?.let {
+      gameDir(context, game).resolve(DATA_VERSION_FILE).writeText(it)
+    }
+  }
+
+  /**
+   * Whether [game]'s installed data comes from another version of the app, and needs installing
+   * again. Data from before versions were recorded counts as another version.
+   */
+  fun needsUpdate(context: Context, game: Game): Boolean {
+    val installed = runCatching { gameDir(context, game).resolve(DATA_VERSION_FILE).readText() }
+    return installed.getOrNull() != dataVersion(context, game)
   }
 
   /** Unpacks the runtime's files into its data folder, once per install or update of the app. */

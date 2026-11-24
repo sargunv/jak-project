@@ -1,3 +1,4 @@
+import java.security.MessageDigest
 import javax.inject.Inject
 
 plugins {
@@ -50,7 +51,43 @@ abstract class StageGameFiles : DefaultTask() {
       .writeText(
         BUILD_FILES.flatMap { (game, paths) -> paths.map { "$game $it" } }.joinToString("\n"),
       )
+    // Each game's data version: a hash of what its installed data comes from. When an update
+    // changes it, the launcher asks to install the game again.
+    val shared = hashFiles(root.asFile, DATA_SOURCES, exclude = "decompiler/config/")
+    outputDir
+      .file("data-versions.txt")
+      .get()
+      .asFile
+      .writeText(
+        BUILD_FILES.keys
+          .filter { it != "*" }
+          .joinToString("\n") { game ->
+            val files =
+              hashFiles(root.asFile, BUILD_FILES.getValue("*") + BUILD_FILES.getValue(game))
+            "$game ${sha256(shared + files).take(16)}"
+          },
+      )
   }
+
+  private fun hashFiles(root: File, paths: List<String>, exclude: String? = null): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    paths
+      .map { root.resolve(it) }
+      .flatMap { it.walk().filter(File::isFile).toList() }
+      .map { it.relativeTo(root).invariantSeparatorsPath to it }
+      .filter { (path, _) -> exclude == null || !path.startsWith(exclude) }
+      .sortedBy { it.first }
+      .forEach { (path, file) ->
+        digest.update(path.toByteArray())
+        digest.update(file.readBytes())
+      }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+  }
+
+  private fun sha256(text: String) =
+    MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") {
+      "%02x".format(it)
+    }
 
   companion object {
     /** What the runtime reads, besides the game's data in out/. */
@@ -74,6 +111,13 @@ abstract class StageGameFiles : DefaultTask() {
         "jak2" to listOf("goal_src/jak2", "goal_src/jak1/pc", "decompiler/config/jak2"),
         "jak3" to listOf("goal_src/jak3", "goal_src/jak1/pc", "decompiler/config/jak3"),
       )
+
+    /**
+     * What else decides a game's installed data: the decompiler, the compiler, and the formats and
+     * versions they share with the runtime. Changes to the runtime alone don't need new data.
+     */
+    val DATA_SOURCES =
+      listOf("decompiler", "goalc", "common/custom_data", "common/versions", "common/goos")
   }
 }
 
@@ -81,9 +125,10 @@ val stageGameFiles =
   tasks.register<StageGameFiles>("stageGameFiles") {
     repoRoot.set(layout.projectDirectory.dir("../.."))
     sources.from(
-      (StageGameFiles.RUNTIME_FILES + StageGameFiles.BUILD_FILES.values.flatten()).map {
-        repoRoot.file(it)
-      },
+      (StageGameFiles.RUNTIME_FILES +
+          StageGameFiles.BUILD_FILES.values.flatten() +
+          StageGameFiles.DATA_SOURCES)
+        .map { repoRoot.file(it) },
     )
   }
 

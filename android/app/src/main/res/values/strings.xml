@@ -8,6 +8,10 @@
 
   <string name="library_footer">Install games from ISO or CHD disc images.</string>
   <string name="game_installed">Ready to play · %1$s</string>
+  <string name="game_needs_update">Update needed · %1$s</string>
+  <string name="update_title">Update %1$s?</string>
+  <string name="update_text">This version installs the game differently. Updating installs it again from your disc image and takes a few minutes. Saves and settings are kept.</string>
+  <string name="update_confirm">Update</string>
   <string name="game_not_installed">Install from a disc image</string>
   <string name="game_install_failed">Couldn\'t install</string>
   <string name="game_menu">More options</string>

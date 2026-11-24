@@ -69,7 +69,10 @@ private fun Library(viewModel: LibraryViewModel = viewModel()) {
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
       val game = installing
       installing = null
-      if (game != null && uri != null) InstallService.start(context, game, uri)
+      if (game != null && uri != null) {
+        DiscImages.remember(context, game, uri)
+        InstallService.start(context, game, uri)
+      }
     }
   // The install shows its progress in a notification, but goes ahead without one
   val askForNotifications =
@@ -83,19 +86,26 @@ private fun Library(viewModel: LibraryViewModel = viewModel()) {
     onPauseOrDispose {}
   }
 
+  val install: (Game) -> Unit = { game ->
+    installing = game
+    if (
+      Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+          PackageManager.PERMISSION_GRANTED
+    ) {
+      askForNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+    } else {
+      pickIso.launch(ISO_TYPES)
+    }
+  }
+
   LibraryScreen(
     games = games,
-    onInstall = { game ->
-      installing = game
-      if (
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-          context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-      ) {
-        askForNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-      } else {
-        pickIso.launch(ISO_TYPES)
-      }
+    onInstall = install,
+    // From the disc image the player picked before, or a new one if the app can't read it now
+    onUpdate = { game ->
+      DiscImages.get(context, game)?.let { InstallService.start(context, game, it) }
+        ?: install(game)
     },
     onPlay = { game ->
       context.startActivity(Intent(context, GameActivity::class.java).putExtra("game", game.id))
