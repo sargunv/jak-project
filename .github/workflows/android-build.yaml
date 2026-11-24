@@ -84,7 +84,7 @@ jobs:
           # v1.2.3 tags make version 1.2.3
           export POCKETGOAL_VERSION_NAME="${VERSION_NAME#v}"
           export POCKETGOAL_VERSION_CODE=$(git rev-list --count HEAD)
-          ./gradlew --no-configuration-cache testDebugUnitTest ${{ inputs.release && 'assembleRelease' || 'assembleDebug' }}
+          ./gradlew --no-configuration-cache --stacktrace testDebugUnitTest ${{ inputs.release && 'assembleRelease' || 'assembleDebug' }}
 
       - name: Name APK
         env:
