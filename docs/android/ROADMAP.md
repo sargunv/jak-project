@@ -158,10 +158,11 @@ On the AYN Thor (Android 13, Snapdragon 8 Gen 2, Adreno 740, 16 GB):
       occlusion probes sampled the depth buffer with `GL_LINEAR`, which OpenGL
       ES can't do for depth textures, so the texture read as 0 and every probe
       passed. It samples with `GL_NEAREST` on OpenGL ES.
-- [ ] Jak II logs OpenGL errors on Adreno: the ocean draws primitives of fewer
-      than 3 vertices (thousands a frame), and the sky's texture animation
-      (`tex-lcom-sky-pre`) can't generate mipmaps for a texture whose format it
-      uploaded differently. Check what they look like.
+- [x] Jak II's sky had no clouds on OpenGL ES: its noise textures uploaded with
+      the unsized format `GL_RED`, which OpenGL ES doesn't take, so the upload
+      and the mipmaps after it failed. They upload as `GL_R8`.
+- [x] The ocean drew its empty buckets every frame, which Adreno reports as an
+      error each time (thousands a minute during Jak II's intro). It skips them.
 - [x] The Adreno 740 has `GL_NV_shader_noperspective_interpolation`, so the sky
       interpolates as on desktop. Skinned characters (merc) render correctly, so
       the Adreno 6xx bone uniform bug that Precursor worked around doesn't
