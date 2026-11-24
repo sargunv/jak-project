@@ -328,6 +328,9 @@ std::vector<u8> Compiler::codegen_object_file(FileEnv* env) {
     auto stats = gen.get_obj_stats();
     m_debug_stats.num_moves_eliminated += stats.moves_eliminated;
     env->cleanup_after_codegen();
+    if (!m_settings.keep_debug_info) {
+      debug_info->clear();
+    }
     return result;
   } catch (std::exception& e) {
     throw_compiler_error_no_code("Error during codegen: {}", e.what());

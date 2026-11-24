@@ -9,6 +9,9 @@ CompilerSettings::CompilerSettings() {
 
   m_settings["disable-math-const-prop"].kind = SettingKind::BOOL;
   m_settings["disable-math-const-prop"].boolp = &disable_math_const_prop;
+
+  m_settings["keep-debug-info"].kind = SettingKind::BOOL;
+  m_settings["keep-debug-info"].boolp = &keep_debug_info;
 }
 
 void CompilerSettings::set(const std::string& name, const goos::Object& value) {

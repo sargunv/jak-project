@@ -167,6 +167,8 @@ ExtractorErrorCode compile(const fs::path& iso_data_path,
   }
 
   compiler.make_system().load_project_file(project_path.string());
+  // Nothing debugs this build, so don't hold every function's debug info until it ends
+  compiler.run_front_end_on_string("(set-config! keep-debug-info #f)");
   compiler.run_front_end_on_string("(mi)");
 
   return ExtractorErrorCode::SUCCESS;
