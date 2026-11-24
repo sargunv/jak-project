@@ -133,8 +133,11 @@ On the AYN Thor (Android 13, Snapdragon 8 Gen 2, Adreno 740, 16 GB):
       decompressing the CHD), and plays from the launcher: it reaches the title
       screen at 1920x1080.
 - [x] Jak II installs from its CHD in 5 min 20 s (peak 4.5 GB, 4.8 GB installed)
-      and Jak 3 in 5 min 33 s (peak 5.8 GB, 5.2 GB installed). Both reach their
-      title screens and hold 60 fps there. Neither has been played.
+      and Jak 3 in 5 min 33 s (5.2 GB installed), when memory allows (see
+      install memory). Jak II has been played through the fortress escape.
+- [x] Frame times: Haven City (Jak II), Jak 3's opening cutscene, and Jak 1's
+      citadel and snowy mountain all hold 60 fps, every frame shown for one
+      refresh.
 - [x] Frame pacing. The Thor's screen runs at 120 Hz (its settings force a
       minimum of 120), and the game's frame limiter put 8% of frames on the
       screen for one or three refreshes instead of two. `GameActivity` now picks
@@ -187,7 +190,7 @@ the renderer can be finished before any arm64 hardware is involved.
       framebuffer with `glReadPixels`, for debug texture dumps.
 - [x] Jak 1's graphics menu disables display mode and monitor on Android, where
       the game always fills the screen: `pc-get-os` returns `android`. Jak II
-      and Jak 3 have their own menus, still to do.
+      and Jak 3's menus do the same.
 - [ ] Pixel-exact render comparisons. Frame numbers don't line up the game state
       between builds, so the comparison shows the same place from slightly
       different moments. Capturing a frame's DMA chain on one build and
@@ -210,18 +213,23 @@ the renderer can be finished before any arm64 hardware is involved.
 - [ ] **Audio latency** on a device. AAudio opens in low-latency mode with
       240-frame bursts in Innkeeper. On the Thor it's a fast mixer track on the
       media stream, not MMAP, and the system volume applies its usual curve.
-- [ ] **Install memory.** Jak II's decompile peaked at 7 GB with a thread per
-      level, and Android's low memory killer stopped the app on the 16 GB Thor.
-      The decompiler config's `level_extract_threads` limits how many levels
-      extract at once, and the installer passes 4, which peaks at 5.4 GB on
-      desktop. Jak II's build also loaded every DGO again for its `test-zone`
-      custom level, to find one texture; on Android, custom levels go without
-      textures and art groups from the game. Most of the rest is the decompiler
-      holding every DGO's linked words (16 bytes per 4-byte word, 2.4 GB for Jak
-      II) and every decoded texture (1.5 GB) at once. 8 GB devices need less:
-      pack `LinkedWord` into 12 bytes, or extract levels without loading every
-      DGO first. Interning symbol names in `LinkedWord` saved nothing. When
-      Android stops an install, the launcher says so the next time it opens.
+- [ ] **Install memory.** Jak 3's install peaks at 8.9 GB (desktop, 4 level
+      threads), while decoding textures, and Android stops it on the 16 GB Thor
+      unless little else is running. Jak II's decompile peaked at 7 GB with a
+      thread per level, and Android's low memory killer stopped the app on the
+      16 GB Thor. The decompiler config's `level_extract_threads` limits how
+      many levels extract at once, and the installer passes 4, which peaks at
+      5.4 GB on desktop. Jak II's build also loaded every DGO again for its
+      `test-zone` custom level, to find one texture; on Android, custom levels
+      go without textures and art groups from the game. Most of the rest is the
+      decompiler holding every DGO's linked words (16 bytes per 4-byte word, 2.4
+      GB for Jak II) and every decoded texture (1.5 GB) at once. 8 GB devices
+      need less: pack `LinkedWord` into 12 bytes, or extract levels without
+      loading every DGO first. Interning symbol names in `LinkedWord` saved
+      nothing. When Android stops an install, the launcher says so the next time
+      it opens. The installer reads the ISO through its own copy of the
+      provider's descriptor: while the provider's was open, Android stopped the
+      app whenever it stopped External Storage for memory.
 - [x] Jak II and Jak 3 compile Jak 1's PC kernel (`goal_src/jak1/pc`), which the
       APK now unpacks for them too.
 - [x] Disk use while installing: the build hard-links the ISO's files into
@@ -234,9 +242,12 @@ the renderer can be finished before any arm64 hardware is involved.
 
 - [ ] Settings, memory cards and screenshots in app storage, with backup and
       restore.
-- [ ] **Performance.** Thread placement on big.LITTLE cores, and frame times in
-      busy levels. Frame pacing at 60 fps is done (see the Thor).
-- [ ] Aspect ratios: the Thor's 16:9 top screen and 20:9 phones.
+- [ ] **Performance.** Thread placement on big.LITTLE cores. Frame pacing and
+      frame times in busy levels are done on the Thor.
+- [x] Aspect ratios: the Thor's 16:9 screen and a 20:9 phone (Innkeeper's medium
+      phone, 2400x1080) both fill the screen without stretching. The stock
+      emulator confirms the system bars hide; Innkeeper's system UI draws them
+      anyway.
 - [x] REPL over `adb forward` works in Innkeeper.
 
 ## Milestone 3: arm64
@@ -247,7 +258,7 @@ the renderer can be finished before any arm64 hardware is involved.
 - [x] The listener never accepts on the translation emulator: connections time
       out, even from inside the device. On the Thor it works, so it's the
       emulator's translation, not the arm64 build.
-- [ ] **Check the upstream ARM64 backend against the standard ARM64 ABI.**
+- [x] **Check the upstream ARM64 backend against the standard ARM64 ABI.**
       Upstream tested it on macOS, and Apple's ABI differs from Linux and
       Android:
   - [x] `x18` is the platform register on both. The backend never allocates it.
@@ -265,18 +276,18 @@ the renderer can be finished before any arm64 hardware is involved.
   - [x] Executable memory: the linker, C stubs and mips2c stubs all flush with
         `__builtin___clear_cache` over what they wrote before running it, and
         the Thor runs the game.
-- [ ] Heap sizes: arm64 code is bigger. Upstream PR #4439 raised Jak II's
-      `DEBUG_LEVEL_HEAP_MULT` to 1.15 for the kid escort mission. Precursor
-      found x86-sized backup stacks too small on its own backend. Upstream's
-      backend may not have that problem: check.
+- [x] Heap sizes: arm64 code is bigger. Jak II's `DEBUG_LEVEL_HEAP_MULT` is 1.15
+      for arm64, as in upstream PR #4439, for the kid escort mission. Jak 3's is
+      already 1.2. Precursor found x86-sized backup stacks too small on its own
+      backend; nothing has hit that here.
 - [x] Testing arm64 without a handheld: the x86_64 Google APIs emulator image
       translates arm64 apps, including the game code that the runtime links at
       run time. It runs without a display (its GPU stops at OpenGL ES 3.0).
       `qemu-aarch64` user mode with a Linux arm64 `goalc-test` would test the
       backend on the standard ABI without a translator in between, but needs a
       Linux arm64 sysroot.
-- [ ] On the Thor itself: frame times in busy levels on the Snapdragon 8 Gen 2.
-      The title screen and Geyser Rock hold 60 fps.
+- [x] On the Thor itself: busy levels in all three games hold 60 fps on the
+      Snapdragon 8 Gen 2.
 
 ## Milestone 4: an app for players
 
