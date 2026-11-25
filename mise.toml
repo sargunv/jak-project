@@ -18,6 +18,7 @@ lockfile_mode = "merge"
 "conda:spirv-tools" = "2026.4"
 "core:java" = "zulu-25.38.201.0"
 "core:python" = "3.14.10"
+"github:jdx/fnox" = "1.50.0"
 # The version upstream's CI checks C++ formatting with (.github/workflows/linting.yaml)
 "pipx:clang-format" = "18.1.8"
 
@@ -110,6 +111,10 @@ adb shell am start -n dev.sargunv.pocketgoal/.GameActivity --es game "${usage_ga
 [tasks."android:logcat"]
 description = "Follow the app's logs"
 run = "adb logcat -s OpenGOAL:V SDL:V DEBUG:V AndroidRuntime:E libc:F"
+
+[tasks."secrets:push"]
+description = "Set the repository's Actions secrets (signing keys) from fnox.toml"
+run = "fnox export --format env | gh secret set --repo sargunv/jak-project --env-file -"
 
 [tasks."shaders:check"]
 description = "Compile every shader for desktop OpenGL and OpenGL ES, and compare desktop SPIR-V with upstream"

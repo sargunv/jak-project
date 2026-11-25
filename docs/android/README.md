@@ -187,6 +187,11 @@ last. Release builds sign with the release key in the repository's Actions
 secrets (`POCKETGOAL_KEYSTORE_BASE64` and its passwords), and with the debug key
 when built locally.
 
+GitHub can't read Actions secrets back, so `fnox.toml` keeps an age-encrypted
+copy of each. `fnox get <NAME>` decrypts one with the age key in
+`~/.config/fnox/age.txt`, and `mise run secrets:push` sets the Actions secrets
+from them.
+
 Each release also rebuilds the F-Droid repo at
 `https://code.sargunv.dev/jak-project/repo` (`android-fdroid.yaml`, on GitHub
 Pages). fdroidserver indexes the three newest releases' APKs, which keep the
