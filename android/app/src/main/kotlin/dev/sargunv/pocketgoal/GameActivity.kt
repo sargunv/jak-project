@@ -75,6 +75,12 @@ class GameActivity : SDLActivity() {
       if (gameData.list()?.isNotEmpty() == true) GameFiles.link(dataDir.resolve("out"), gameData)
     }
     val configDir = filesDir.resolve("config")
+    // Saves go where frontends such as Argosy sync a PS2 emulator's: each game's folder on a PS2
+    // folder memory card, named like PCSX2's first card, in external storage (kmemcard.cpp)
+    val memcardArgs =
+      getExternalFilesDir(null)?.let {
+        arrayOf("--memcard-path", it.resolve("memcards/Mcd001.ps2").path)
+      } ?: emptyArray()
 
     val game = intent.getStringExtra("game") ?: "jak1"
     val gameArgs = (devExtra("args") ?: "-boot -fakeiso").split(' ').filter { it.isNotEmpty() }
@@ -92,8 +98,9 @@ class GameActivity : SDLActivity() {
         dataDir.path,
         "--config-path",
         configDir.path,
-        "--",
       ) +
+      memcardArgs +
+      "--" +
       gameArgs
   }
 

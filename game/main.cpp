@@ -103,6 +103,9 @@ int main(int argc, char** argv) {
   int port_number = -1;
   fs::path project_path_override;
   fs::path user_config_dir_override;
+#ifdef __ANDROID__
+  fs::path memcard_dir_override;
+#endif
   std::vector<std::string> game_args;
   CLI::App app{"OpenGOAL Game Runtime"};
   app.add_flag("--version", show_version, "Display the built revision");
@@ -131,6 +134,11 @@ int main(int argc, char** argv) {
                  "Specify the location of the 'data/' folder");
   app.add_option("--config-path", user_config_dir_override,
                  "Override the location where all user configuration and saves are saved");
+#ifdef __ANDROID__
+  app.add_option("--memcard-path", memcard_dir_override,
+                 "Keep every game's saves in this PS2 folder memory card, as a PS2 game's "
+                 "folder, over --config-path");
+#endif
   app.footer(game_arg_documentation());
   app.add_option("Game Args", game_args,
                  "Remaining arguments (after '--') that are passed-through to the game itself");
@@ -151,6 +159,12 @@ int main(int argc, char** argv) {
     lg::info("Overriding config directory with: {}", user_config_dir_override.string());
     file_util::override_user_config_dir(user_config_dir_override, !disable_save_location_override);
   }
+#ifdef __ANDROID__
+  if (!memcard_dir_override.empty()) {
+    lg::info("Keeping saves in memory card: {}", memcard_dir_override.string());
+    file_util::override_user_memcard_dir(memcard_dir_override);
+  }
+#endif
 
   if (show_version) {
     lg::print("{}", build_revision());

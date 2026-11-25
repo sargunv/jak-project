@@ -303,9 +303,14 @@ the renderer can be finished before any arm64 hardware is involved.
 - [x] Frontends: opening a disc image with the app (`ACTION_VIEW`), as Argosy
       does with an emulator, identifies the game, installs it from that disc if
       needed, and plays it.
-- [ ] Frontend save sync: saves in storage that a frontend can reach, and
-      PocketGOAL in Argosy's list of emulators, so Argosy syncs Jak saves with
-      RomM ([#1](https://github.com/sargunv/jak-project/issues/1)).
+- [x] Saves in storage that a frontend can reach: each game's PS2 save folder,
+      with the PS2 game's icon and bank sizes, on a PS2 folder memory card in
+      external storage. Jak 1's folder loads both ways between PocketGOAL and
+      ARMSX2. Jak II and Jak 3 save in the same shape, unchecked against their
+      PS2 saves.
+- [ ] Frontend save sync: PocketGOAL in Argosy's list of emulators, so Argosy
+      syncs Jak saves with RomM
+      ([#1](https://github.com/sargunv/jak-project/issues/1)).
 - [ ] Web requests for the leaderboards: Android's HTTP client through JNI, or
       libcurl with a TLS library that builds for Android.
 

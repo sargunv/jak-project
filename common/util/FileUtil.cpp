@@ -64,6 +64,10 @@ struct {
   fs::path user_config_dir_override = "";
   // by default - if the config dir is overridden, we don't use the default save location
   bool use_overridden_config_dir_for_saves = true;
+#ifdef __ANDROID__
+  // Every game's saves, as folders on one PS2 folder memory card, which frontends sync
+  fs::path memcard_dir_override = "";
+#endif
 } g_file_path_info;
 
 fs::path get_user_config_dir() {
@@ -97,6 +101,11 @@ fs::path get_user_settings_dir(GameVersion game_version) {
 }
 
 fs::path get_user_memcard_dir(GameVersion game_version) {
+#ifdef __ANDROID__
+  if (!g_file_path_info.memcard_dir_override.empty()) {
+    return g_file_path_info.memcard_dir_override;
+  }
+#endif
   auto game_version_name = game_version_names[game_version];
   auto config_dir = get_user_config_dir();
   if (!g_file_path_info.user_config_dir_override.empty() &&
@@ -243,6 +252,12 @@ void override_user_config_dir(fs::path user_config_dir_override,
   g_file_path_info.user_config_dir_override = user_config_dir_override;
   g_file_path_info.use_overridden_config_dir_for_saves = use_overridden_config_dir_for_saves;
 }
+
+#ifdef __ANDROID__
+void override_user_memcard_dir(fs::path memcard_dir) {
+  g_file_path_info.memcard_dir_override = memcard_dir;
+}
+#endif
 
 fs::path get_jak_project_dir() {
   ASSERT(g_file_path_info.initialized);

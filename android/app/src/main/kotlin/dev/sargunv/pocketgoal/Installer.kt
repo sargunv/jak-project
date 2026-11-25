@@ -107,6 +107,12 @@ internal class Installer(
       dest.mkdirs()
       // What the runtime reads: the files it loads as the game's disc, and the converted levels
       for (name in listOf("iso", "fr3")) move(built.resolve(name), dest.resolve(name))
+      // The icon the PS2 game copies into its save folder, which the runtime does too
+      workDir
+        .resolve("iso_data/${game.id}")
+        .walk()
+        .find { it.name.equals(SAVE_ICON, ignoreCase = true) }
+        ?.copyTo(dest.resolve("iso/$SAVE_ICON"), overwrite = true)
       GameFiles.markDataCurrent(context, game)
       return InstallResult.Success
     } finally {
@@ -203,6 +209,7 @@ internal class Installer(
 
     /** Names the game being installed, in the work folder, until the install ends. */
     private const val GAME_FILE = ".game"
+    private const val SAVE_ICON = "SAVEGAME.ICO"
 
     fun workDir(context: Context): File = context.filesDir.resolve("install")
 

@@ -117,6 +117,18 @@ device, start goalc with `--instruction-set arm64`.
 
 ### Storage
 
+Saves are in external storage, where frontends sync a PS2 emulator's, so Argosy
+can sync them with RomM once it knows PocketGOAL (its issue #331). The runtime's
+`--memcard-path` (Android only) points at
+`Android/data/dev.sargunv.pocketgoal/files/memcards/Mcd001.ps2`, a PS2 folder
+memory card like PCSX2's, and each game's saves are the folder the PS2 game
+writes on a memory card, such as `BASCUS-97124AYBABTU!`, with the same files:
+`icon.sys`, the icon from the disc (`SAVEGAME.ICO`, which the installer keeps),
+the main file, and eight bank files as long as the PS2 game makes them, empty
+until saved to. A Jak 1 save folder moves between PocketGOAL and a PS2
+emulator's memory card in either direction. Settings stay in internal storage
+(`files/config`).
+
 The runtime's data folder is in the app's internal storage (`files/data`). The
 app unpacks the files it ships there, such as shaders, when it's installed or
 updated. Each game's data goes in `files/data/out/<game>`, where the installer

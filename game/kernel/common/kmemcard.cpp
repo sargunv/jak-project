@@ -115,6 +115,129 @@ int mc_get_total_bank_size(GameVersion) {
   return BANK_SIZE[g_game_version] + sizeof(McHeader) * 2;
 }
 
+#ifdef __ANDROID__
+/*
+ * Android keeps each game's saves as the PS2 game does on a memory card: its folder holds the files
+ * the PS2 game writes, and each bank file is as long as the PS2 game makes it. The saves directory
+ * is a PS2 folder memory card (--memcard-path), so frontends sync these folders like a PS2
+ * emulator's, and the same folder works in PocketGOAL, a PS2 emulator, or the PS2 game.
+ */
+
+// The PS2 game leaves 4 KB of zeros after each bank's footer. Checked against Jak 1's PS2 saves,
+// not yet Jak II's or Jak 3's.
+constexpr int PS2_BANK_PADDING = 0x1000;
+
+int mc_get_ps2_bank_file_size() {
+  return mc_get_total_bank_size(g_game_version) + PS2_BANK_PADDING;
+}
+
+/*!
+ * icon.sys, which a PS2's browser reads for the save's title and how to light its icon. These are
+ * the values Jak 1 writes, with the game's name.
+ */
+std::vector<u8> mc_make_icon_sys() {
+  std::vector<u8> icon_sys(964, 0);
+  memcpy(icon_sys.data(), "PS2D", 4);
+  const u16 title_line_break = 32;
+  memcpy(icon_sys.data() + 6, &title_line_break, sizeof(title_line_break));
+  const float light_directions[12] = {0.612f,  0.5f, 0.612f, 0, -0.696f, 0.174f,
+                                      -0.696f, 0,    0,      0, 0,       0};
+  const float light_colors[12] = {0.5f, 0.5f, 0.5f, 0, 0.25f, 0.3f, 1.0f, 0, 0, 0, 0, 0};
+  const float ambient[4] = {0.2f, 0.2f, 0.2f, 0};
+  memcpy(icon_sys.data() + 0x50, light_directions, sizeof(light_directions));
+  memcpy(icon_sys.data() + 0x80, light_colors, sizeof(light_colors));
+  memcpy(icon_sys.data() + 0xb0, ambient, sizeof(ambient));
+
+  // The title in full-width Shift-JIS characters
+  const char* title = "";
+  switch (g_game_version) {
+    case GameVersion::Jak1:
+      title = "Jak and Daxter";
+      break;
+    case GameVersion::Jak2:
+      title = "Jak II";
+      break;
+    case GameVersion::Jak3:
+      title = "Jak 3";
+      break;
+    default:
+      break;
+  }
+  size_t offset = 0xc0;
+  for (const char* c = title; *c && offset + 2 <= 0x104; c++) {
+    u16 code = 0x8140;  // space
+    if (*c >= 'A' && *c <= 'Z') {
+      code = 0x8260 + (*c - 'A');
+    } else if (*c >= 'a' && *c <= 'z') {
+      code = 0x8281 + (*c - 'a');
+    } else if (*c >= '0' && *c <= '9') {
+      code = 0x824f + (*c - '0');
+    }
+    icon_sys[offset++] = code >> 8;
+    icon_sys[offset++] = code & 0xff;
+  }
+
+  // The icon's model for the save as listed, copied, and deleted
+  for (size_t name_offset : {0x104, 0x144, 0x184}) {
+    memcpy(icon_sys.data() + name_offset, "icon.ico", 8);
+  }
+  return icon_sys;
+}
+
+/*!
+ * Writes the files the PS2 game puts in its folder, where they're missing: icon.sys, the icon from
+ * the disc, the file that names the folder, and all eight banks, empty until saved to.
+ */
+void mc_write_ps2_files() {
+  file_util::create_dir_if_needed(mc_get_filename(g_game_version, 0));
+
+  auto icon_sys = mc_get_filename(g_game_version, 1);
+  if (!fs::exists(icon_sys)) {
+    auto data = mc_make_icon_sys();
+    file_util::write_binary_file(icon_sys, data.data(), data.size());
+  }
+
+  // The installer keeps the disc's icon with the game's disc files
+  auto icon = mc_get_filename(g_game_version, 2);
+  auto disc_icon = file_util::get_jak_project_dir() / "out" / game_version_names[g_game_version] /
+                   "iso" / "SAVEGAME.ICO";
+  if (!fs::exists(icon) && fs::exists(disc_icon)) {
+    // Written, not copied, so it doesn't keep the private file's permissions
+    auto data = file_util::read_binary_file(disc_icon);
+    file_util::write_binary_file(icon, data.data(), data.size());
+  }
+
+  auto folder_file = mc_get_filename(g_game_version, 3);
+  if (!fs::exists(folder_file)) {
+    const char text[] = "Nope, the save game data isn't in this file!\n";
+    file_util::write_binary_file(folder_file, text, sizeof(text) - 1);
+  }
+
+  std::vector<u8> empty_bank(mc_get_ps2_bank_file_size(), 0);
+  for (int bank = 4; bank < 12; bank++) {
+    auto bank_file = mc_get_filename(g_game_version, bank);
+    if (!fs::exists(bank_file)) {
+      file_util::write_binary_file(bank_file, empty_bank.data(), empty_bank.size());
+    }
+  }
+}
+
+/*!
+ * Whether a bank file holds a save. The PS2 game makes all eight bank files before saving to any,
+ * so a bank with no save is a file of zeros, which the game would read as a corrupt save.
+ */
+bool mc_bank_has_save(const fs::path& bank_file) {
+  McHeader bank_header;
+  auto fp = file_util::open_file(bank_file, "rb");
+  if (!fp) {
+    return false;
+  }
+  bool read = fread(&bank_header, sizeof(McHeader), 1, fp) == 1;
+  fclose(fp);
+  return read && bank_header.magic == MEM_CARD_MAGIC;
+}
+#endif
+
 void kmemcard_init_globals() {
   // next = 0;
   language = 0;
@@ -161,6 +284,11 @@ bool file_is_present(int id, int bank = 0) {
     // file doesn't exist, or size is bad. we do not want to open files that will crash on read!
     return false;
   }
+#ifdef __ANDROID__
+  if (!mc_bank_has_save(bankname)) {
+    return false;
+  }
+#endif
   // avoid file check here tbh. there shouldn't be any saves with a save count of zero anyway.
   // the file check is quite slow and ultimately not very useful.
   return true;
@@ -231,6 +359,9 @@ void pc_game_save_synch() {
   pc_update_card();
   auto path = mc_get_filename(g_game_version, 0);
   file_util::create_dir_if_needed_for_file(path.string());
+#ifdef __ANDROID__
+  mc_write_ps2_files();
+#endif
 
   // cd_reprobe_save //
   if (!file_is_present(op.param2)) {
@@ -274,6 +405,10 @@ void pc_game_save_synch() {
           // cb_savedfooter //
           if (fclose(fd) == 0) {
             // cb_closedsave //
+#ifdef __ANDROID__
+            std::error_code ec;
+            fs::resize_file(save_path, mc_get_ps2_bank_file_size(), ec);
+#endif
             mc_print("All done with saving!!");
             op.operation = MemoryCardOperationKind::NO_OP;
             op.result = McStatusCode::OK;
